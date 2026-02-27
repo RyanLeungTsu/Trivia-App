@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { supabase } from "../lib/supabaseClient";
+import { useAuthStore } from "../lib/authStore";
 
 export type ElementKind = "text" | "image" | "audio" | "video";
 export const DefaultFontSize = 40;
@@ -37,8 +39,6 @@ export interface Board {
   updatedAt: number;
 }
 
-const Default_Board = createEmptyBoard("Untitled Board");
-
 interface BoardState {
   editMode: boolean;
   setEditMode: (mode: boolean) => void;
@@ -60,6 +60,10 @@ interface BoardState {
   setStagedCell: (cell: JeopardyCell | null) => void;
   commitStagedCell: () => void;
 
+  featuredBoard: Board | null;
+  loadFeaturedBoard: () => Promise<void>;
+  publishAsFeaturedBoard: () => Promise<void>;
+
   rows: number;
   columns: number;
   addRow: () => void;
@@ -76,6 +80,8 @@ interface BoardState {
   setCategoryAt: (index: number, value: string) => void;
 
   resetPlayedCells: () => void;
+
+  loadBoards: () => Promise<void>;
 }
 
 export function createEmptyBoard(name = ""): Board {
@@ -122,6 +128,45 @@ export function createEmptyBoard(name = ""): Board {
   };
 }
 
+// Persists boards to Supabase if signed in, otherwise falls back to localStorage
+async function persistBoards(boards: Board[]): Promise<void> {
+  const user = useAuthStore.getState().user;
+  if (user) {
+    const rows = boards.map((b) => ({
+      id: b.id,
+      user_id: user.id,
+      name: b.name,
+      data: b,
+      created_at: b.createdAt,
+      updated_at: b.updatedAt,
+    }));
+    const { error } = await supabase
+      .from("boards")
+      .upsert(rows, { onConflict: "id" });
+    if (error) console.error("Error persisting boards to Supabase:", error);
+  } else {
+    localStorage.setItem("jeopardyBoards", JSON.stringify(boards));
+  }
+}
+
+// Deletes a single board from Supabase if signed in, otherwise removes from localStorage
+async function deleteBoardFromStorage(
+  id: string,
+  remainingBoards: Board[],
+): Promise<void> {
+  const user = useAuthStore.getState().user;
+  if (user) {
+    const { error } = await supabase
+      .from("boards")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
+    if (error) console.error("Error deleting board from Supabase:", error);
+  } else {
+    localStorage.setItem("jeopardyBoards", JSON.stringify(remainingBoards));
+  }
+}
+
 export const useBoardStore = create<BoardState>((set, get) => {
   const savedBoards =
     typeof window !== "undefined"
@@ -136,6 +181,128 @@ export const useBoardStore = create<BoardState>((set, get) => {
     boards,
     activeBoardId: boards.length > 0 ? boards[0].id : null,
     activeBoard: boards.length > 0 ? boards[0] : null,
+
+    // featured board that i set!
+    featuredBoard: null,
+
+    // Loads the featured board from Supabase, default baord for all users
+    loadFeaturedBoard: async () => {
+      console.log("loadFeaturedBoard called");
+      const { data, error } = await supabase
+        .from("featured_board")
+        .select("data")
+        .eq("id", "singleton")
+        .single();
+
+      console.log("raw data:", data);
+      console.log("raw error:", error);
+
+      if (error || !data?.data || Object.keys(data.data).length === 0) {
+        console.log("bailing out — reason:", { error, data });
+        return;
+      }
+
+      const featured = data.data as Board;
+      set({ featuredBoard: featured });
+
+      // shows the featured board
+      const { boards } = get();
+      if (boards.length === 0) {
+        set({
+          activeBoard: featured,
+          activeBoardId: featured.id,
+        });
+      }
+    },
+
+    publishAsFeaturedBoard: async () => {
+      const { activeBoard } = get();
+      if (!activeBoard) return;
+
+      const boardToPublish: Board = {
+        ...activeBoard,
+        usedCells: {},
+        updatedAt: Date.now(),
+      };
+
+      const { error } = await supabase.from("featured_board").upsert({
+        id: "singleton",
+        data: boardToPublish,
+        updated_at: Date.now(),
+      });
+
+      if (error) {
+        console.error("Error publishing featured board:", error);
+        alert("Failed to publish featured board.");
+      } else {
+        alert(`"${activeBoard.name}" is now the featured board!`);
+        set({ featuredBoard: boardToPublish });
+      }
+    },
+    // Loads boards from Supabase when user signs in, or from localStorage for guests
+    loadBoards: async () => {
+      const user = useAuthStore.getState().user;
+      if (user) {
+        const { data, error } = await supabase
+          .from("boards")
+          .select("data")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true });
+
+        if (error) {
+          console.error("Error loading boards from Supabase:", error);
+          return;
+        }
+
+        const loadedBoards: Board[] =
+          data?.map((row) => row.data as Board) ?? [];
+
+        if (loadedBoards.length === 0) {
+          // check first to see if local baords exists then move to migrate if they do
+          const localData =
+            typeof window !== "undefined"
+              ? localStorage.getItem("jeopardyBoards")
+              : null;
+          const localBoards: Board[] = localData ? JSON.parse(localData) : [];
+
+          if (localBoards.length > 0) {
+            // this allows the app to migrate local boards up to Supabase so you do not lose any progress
+            set({
+              boards: localBoards,
+              activeBoardId: localBoards[0].id,
+              activeBoard: localBoards[0],
+            });
+            persistBoards(localBoards).catch(console.error);
+            localStorage.removeItem("jeopardyBoards");
+          } else {
+            const defaultBoard = createEmptyBoard("Untitled Board");
+            set({
+              boards: [defaultBoard],
+              activeBoardId: defaultBoard.id,
+              activeBoard: defaultBoard,
+            });
+            persistBoards([defaultBoard]).catch(console.error);
+          }
+        } else {
+          set({
+            boards: loadedBoards,
+            activeBoardId: loadedBoards[0].id,
+            activeBoard: loadedBoards[0],
+          });
+        }
+      } else {
+        const savedBoards =
+          typeof window !== "undefined"
+            ? localStorage.getItem("jeopardyBoards")
+            : null;
+        const localBoards: Board[] = savedBoards ? JSON.parse(savedBoards) : [];
+        set({
+          boards: localBoards,
+          activeBoardId: localBoards.length > 0 ? localBoards[0].id : null,
+          activeBoard: localBoards.length > 0 ? localBoards[0] : null,
+        });
+      }
+    },
 
     setCategoryAt: (index: number, value: string) => {
       const { activeBoard } = get();
@@ -165,29 +332,25 @@ export const useBoardStore = create<BoardState>((set, get) => {
     },
 
     createBoard: (name) => {
-      const { activeBoard, boards } = get();
-      if (!activeBoard) return;
+      const { boards } = get();
 
       const newBoard: Board = {
-        ...Default_Board,
+        ...createEmptyBoard(name || "Untitled Board"),
         id: crypto.randomUUID(),
         name: name || "Untitled Board",
         createdAt: Date.now(),
         updatedAt: Date.now(),
-        cells: activeBoard.cells.map((cell) => ({
-          ...cell,
-          slides: cell.slides.map((slide) => ({
-            elements: slide.elements.map((el) => ({ ...el })),
-          })),
-        })),
-        usedCells: { ...activeBoard.usedCells },
       };
 
       const updatedBoards = [...boards, newBoard];
-      localStorage.setItem("jeopardyBoards", JSON.stringify(updatedBoards));
+      persistBoards(updatedBoards).catch(console.error);
+
+      persistBoards(updatedBoards).catch(console.error);
 
       set({
         boards: updatedBoards,
+        activeBoardId: newBoard.id,
+        activeBoard: newBoard,
       });
     },
 
@@ -203,7 +366,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
           b.id === updatedBoard.id ? updatedBoard : b,
         );
 
-        localStorage.setItem("jeopardyBoards", JSON.stringify(updatedBoards));
+        persistBoards(updatedBoards).catch(console.error);
 
         return {
           boards: updatedBoards,
@@ -227,7 +390,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
           newActiveBoard = empty;
           newActiveBoardId = empty.id;
         }
-        localStorage.setItem("jeopardyBoards", JSON.stringify(remainingBoards));
+        deleteBoardFromStorage(id, remainingBoards).catch(console.error);
         return {
           boards: remainingBoards,
           activeBoardId: newActiveBoardId,
@@ -528,10 +691,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
             activeBoardId: defaultBoard.id,
             activeBoard: defaultBoard,
           });
-          localStorage.setItem(
-            "jeopardyBoards",
-            JSON.stringify([defaultBoard]),
-          );
+          persistBoards([defaultBoard]).catch(console.error);
         }
       }
     },

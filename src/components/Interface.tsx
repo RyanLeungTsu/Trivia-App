@@ -1,6 +1,12 @@
 "use client";
 import React, { useState } from "react";
 import { useBoardStore } from "../store/editorStore";
+import AuthButton from "../components/authButton";
+// For Zip loading boards
+import {
+  ZipDownloadButton,
+  ZipImportButton,
+} from "../components/zipBoardDownload";
 
 type Player = {
   id: string;
@@ -72,7 +78,7 @@ const Interface: React.FC = () => {
     <>
       {/* left side ui for players */}
       {expanded && (
-        <div className="fixed left-4 top-1/2 transform -translate-y-1/2 w-50 bg-white rounded-lg shadow-xl p-4 z-100">
+        <div className="fixed left-0 top-1/2 transform -translate-y-1/2 w-50 bg-white rounded-lg shadow-xl p-4 z-100">
           <button
             onClick={() => setExpanded(false)}
             className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-sm"
@@ -154,7 +160,7 @@ const Interface: React.FC = () => {
       )}
 
       {/* Ui for the buttons (stackin on the right side)*/}
-      <div className="fixed right-4 top-1/2 transform -translate-y-1/2 flex flex-col gap-3 z-50">
+      <div className="fixed right-0 top-1/2 transform -translate-y-1/2 flex flex-col gap-3 z-50">
         <button
           onClick={() => setEditMode(!editMode)}
           className={` w-40 ml-4 mr-4 relative inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-bold group ${editMode ? "bg-gradient-to-br from-green-600 to-lime-400" : "bg-gradient-to-br from-yellow-600 to-amber-500"} ${editMode ? "text-green-500" : "text-amber-400"}  focus:outline-none focus:ring-0  hover:text-white `}
@@ -220,6 +226,9 @@ const Interface: React.FC = () => {
               {board.name}
             </div>
           ))}
+          <div className="mt-4 border-t pt-3">
+            <AuthButton />
+          </div>
         </div>
       )}
 
@@ -240,6 +249,7 @@ const Interface: React.FC = () => {
               >
                 Create New Board
               </button>
+              <ZipImportButton />
             </div>
 
             {boards.length > 0 && (
@@ -251,7 +261,9 @@ const Interface: React.FC = () => {
                       key={board.id}
                       className="flex justify-between items-center mb-1 p-1 border rounded hover:bg-gray-100 cursor-pointer"
                     >
-                      <span className="flex-1 text-gray-900">{board.name}</span>
+                      <span className="flex-1 text-gray-900 truncate mr-1">
+                        {board.name}
+                      </span>
 
                       <div className="flex gap-1">
                         {/* <button
@@ -315,6 +327,8 @@ const Interface: React.FC = () => {
                         >
                           Rename
                         </button>
+                        {/* downloads board as zip */}
+                        <ZipDownloadButton board={board} />
 
                         <button
                           onClick={(e) => {
