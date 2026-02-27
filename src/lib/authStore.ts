@@ -38,12 +38,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
-    await supabase.auth.signOut();
-    set({ user: null });
-    // reload boards as a guest/using lcoalstorage after signing out
-    const { useBoardStore } = await import("../store/editorStore");
-    useBoardStore.getState().loadBoards();
-  },
+  await supabase.auth.signOut();
+  set({ user: null });
+
+  const { useBoardStore } = await import("../store/editorStore");
+  
+  // clear boards from memory so Supabase boards don't persist once signed out
+  useBoardStore.setState({
+    boards: [],
+    activeBoard: null,
+    activeBoardId: null,
+  });
+
+  // reloads as local when signing out
+  useBoardStore.getState().loadBoards();
+},
 
   init: () => {
     // Check existing session
