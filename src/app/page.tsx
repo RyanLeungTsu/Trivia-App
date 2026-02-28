@@ -5,6 +5,7 @@ import Interface from "../components/Interface";
 import FeaturedBoard from "../components/FeaturedBoard";
 import { useAuthStore } from "../lib/authStore";
 import { useBoardStore } from "../store/editorStore";
+import DayNightBackground from "../components/DayNightBackground";
 
 
 export default function Home() {
@@ -49,14 +50,16 @@ export default function Home() {
 
   if (!ready) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-300 from-0% via-blue-200 via-70% via-orange-300 via-7% to-red-400 to-99%">
+      <main className="min-h-screen flex items-center justify-center">
+        <DayNightBackground />
         <div className="text-white text-2xl font-bold">Loading...</div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-300 from-0% via-blue-200 via-70% via-orange-300 via-7% to-red-400 to-99%">
+    <main className="min-h-screen flex items-center justify-center">
+      <DayNightBackground />
       <FeaturedBoard />
       <JeopardyGrid />
       <Interface />
