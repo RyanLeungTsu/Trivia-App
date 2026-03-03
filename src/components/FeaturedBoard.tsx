@@ -13,6 +13,7 @@ const FeaturedBoard: React.FC = () => {
     boards,
     publishAsFeaturedBoard,
     activeBoard,
+    resetPlayedCells,
   } = useBoardStore();
   const { user } = useAuthStore();
 
@@ -42,7 +43,10 @@ const FeaturedBoard: React.FC = () => {
         {featuredBoard.name}
       </span>
       <button
-        onClick={loadFeaturedBoard}
+        onClick={() => {
+          resetPlayedCells();
+          loadFeaturedBoard();
+        }}
         className="w-20 inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-bold text-heading group bg-gradient-to-br from-purple-700 to-orange-400 text-purple-500 hover:text-white focus:outline-none focus:ring-0"
       >
         <span className="w-full relative px-4 py-2 transition-all ease-in duration-350 bg-gray-100 group-hover:bg-transparent">

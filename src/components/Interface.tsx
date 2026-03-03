@@ -281,6 +281,7 @@ const Interface: React.FC = () => {
                         <button
                           onClick={() => {
                             setActiveBoard(board.id);
+                            resetPlayedCells();
                           }}
                           className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded"
                         >
