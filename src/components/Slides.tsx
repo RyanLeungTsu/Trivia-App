@@ -20,6 +20,8 @@ interface SlidesProps {
 const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
   const setStagedCell = useBoardStore((s) => s.setStagedCell);
 
+  const masterId = useBoardStore((s) => s.activeBoard?.masterId);
+
   const [slides, setSlides] = useState<Slide[]>(cell.slides);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [editing, setEditing] = useState(false);
@@ -307,6 +309,7 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
                     <div className="drag-handle relative w-full h-full">
                       <MediaDisplay
                         element={el}
+                        masterId={masterId}
                         style={{
                           width: "100%",
                           height: "100%",
@@ -360,6 +363,7 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
                 {el.kind === "image" && (
                   <MediaDisplay
                     element={el}
+                    masterId={masterId}
                     style={{
                       width: "100%",
                       height: "100%",
@@ -370,8 +374,8 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
                     }}
                   />
                 )}
-                {el.kind === "audio" && <MediaDisplay element={el} />}
-                {el.kind === "video" && <MediaDisplay element={el} />}
+                {el.kind === "audio" && <MediaDisplay element={el} masterId={masterId} />}
+                {el.kind === "video" && <MediaDisplay element={el} masterId={masterId} />}
               </div>
             ),
           )}

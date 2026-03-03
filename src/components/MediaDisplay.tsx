@@ -1,56 +1,68 @@
 // components/MediaDisplay.tsx
 import React, { useEffect, useState } from "react";
-import { getMedia } from "../lib/mediaStorage";
+import { getMedia, getMediaPublic } from "../lib/mediaStorage";
+import { useAuthStore } from "../lib/authStore";
 import { SlideElement } from "../store/editorStore";
 
 interface MediaDisplayProps {
   element: SlideElement;
   className?: string;
   style?: React.CSSProperties;
+  masterId?: string;
 }
 
-const MediaDisplay: React.FC<MediaDisplayProps> = ({ element, className, style }) => {
+const MediaDisplay: React.FC<MediaDisplayProps> = ({ element, className, style, masterId }) => {
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-useEffect(() => {
-  let objectUrl: string | null = null;
+  useEffect(() => {
+    let objectUrl: string | null = null;
 
-  const loadMedia = async () => {
-    setLoading(true);
-    setError(false);
+    const loadMedia = async () => {
+      setLoading(true);
+      setError(false);
 
-    if (!element.content.startsWith('idb://')) {
-      setMediaUrl(element.content);
-      setLoading(false);
-      return;
-    }
+      if (!element.content.startsWith('idb://')) {
+        setMediaUrl(element.content);
+        setLoading(false);
+        return;
+      }
 
-    const mediaId = element.content.replace('idb://', '');
+      const mediaId = element.content.replace('idb://', '');
 
-    try {
-      const url = await getMedia(mediaId);
-      if (url) {
-        objectUrl = url;
-        setMediaUrl(url);
-      } else {
+      try {
+        const user = useAuthStore.getState().user;
+
+        let url: string | null = null;
+        if (!user && masterId) {
+          // guest view uses public
+          url = await getMediaPublic(mediaId, masterId);
+        } else {
+          // if signed in uses nromal getmedia
+          url = await getMedia(mediaId);
+        }
+
+        if (url) {
+          objectUrl = url;
+          setMediaUrl(url);
+        } else {
+          setError(true);
+        }
+      } catch (err) {
+        console.error('Error loading media:', err);
         setError(true);
       }
-    } catch (err) {
-      console.error('Error loading media:', err);
-      setError(true);
-    }
 
-    setLoading(false);
-  };
+      setLoading(false);
+    };
 
-  loadMedia();
+    loadMedia();
 
-  return () => {
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-  };
-}, [element.content]);
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [element.content, masterId]);
 
   if (loading) {
     return (

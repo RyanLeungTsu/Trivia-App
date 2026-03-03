@@ -111,6 +111,12 @@ export async function getMedia(id: string): Promise<string | null> {
     return localUrl;
   }
 }
+// To grab media for public/non 0signed in users
+export async function getMediaPublic(id: string, ownerId: string): Promise<string | null> {
+  const path = `${ownerId}/${id}`;
+  const { data } = supabase.storage.from("media").getPublicUrl(path);
+  return data?.publicUrl ?? null;
+}
 
 // export async function deleteMedia(id: string): Promise<void> {
 //   const db = await getDB();

@@ -38,6 +38,7 @@ export interface Board {
   finalJeopardy?: JeopardyCell | null;
   createdAt: number;
   updatedAt: number;
+  masterId?: string
 }
 
 interface BoardState {
@@ -226,6 +227,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
       const boardToPublish: Board = {
         ...activeBoard,
         usedCells: {},
+        masterId: useAuthStore.getState().user?.id,
         updatedAt: Date.now(),
       };
 
