@@ -26,7 +26,7 @@ export default function Home() {
       await loadFeaturedBoard();
       await loadBoards();
 
-      // restores the last selected board
+      // restores the last selected board(s)
       const lastId = localStorage.getItem("lastBoardId");
       if (lastId) {
         const { boards } = useBoardStore.getState();
