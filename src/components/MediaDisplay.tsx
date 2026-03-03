@@ -14,45 +14,43 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({ element, className, style }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
-    let objectUrl: string | null = null;
+useEffect(() => {
+  let objectUrl: string | null = null;
 
-    const loadMedia = async () => {
-      setLoading(true);
-      setError(false);
+  const loadMedia = async () => {
+    setLoading(true);
+    setError(false);
 
-      if (element.content.startsWith('idb://')) {
-        const mediaId = element.content.replace('idb://', '');
-        
-        try {
-          const url = await getMedia(mediaId);
-          
-          if (url) {
-            objectUrl = url; 
-            setMediaUrl(url);
-          } else {
-            console.error(`Media not found in IndexedDB: ${mediaId}`);
-            setError(true);
-          }
-        } catch (err) {
-          console.error('Error loading media from IndexedDB:', err);
-          setError(true);
-        }
-      } else {
-        setMediaUrl(element.content);
-      }
-
+    if (!element.content.startsWith('idb://')) {
+      setMediaUrl(element.content);
       setLoading(false);
-    };
+      return;
+    }
 
-    loadMedia();
+    const mediaId = element.content.replace('idb://', '');
 
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
+    try {
+      const url = await getMedia(mediaId);
+      if (url) {
+        objectUrl = url;
+        setMediaUrl(url);
+      } else {
+        setError(true);
       }
-    };
-  }, [element.content]);
+    } catch (err) {
+      console.error('Error loading media:', err);
+      setError(true);
+    }
+
+    setLoading(false);
+  };
+
+  loadMedia();
+
+  return () => {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  };
+}, [element.content]);
 
   if (loading) {
     return (

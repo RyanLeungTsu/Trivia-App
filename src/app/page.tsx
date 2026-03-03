@@ -7,7 +7,6 @@ import { useAuthStore } from "../lib/authStore";
 import { useBoardStore } from "../store/editorStore";
 import DayNightBackground from "../components/DayNightBackground";
 
-
 export default function Home() {
   const init = useAuthStore((s) => s.init);
   const loadBoards = useBoardStore((s) => s.loadBoards);
@@ -24,15 +23,23 @@ export default function Home() {
     const setup = async () => {
       await useAuthStore.getState().waitForAuth();
 
-      // load featured board first so new visitors always see something
       await loadFeaturedBoard();
-      // debugging
-      // const state = useBoardStore.getState();
-      // console.log("featuredBoard after load:", state.featuredBoard);
-
       await loadBoards();
 
-      // if no board is created by user uses featured board as default
+      // restores the last selected board
+      const lastId = localStorage.getItem("lastBoardId");
+      if (lastId) {
+        const { boards } = useBoardStore.getState();
+        const found = boards.find((b) => b.id === lastId);
+        if (found) {
+          useBoardStore.setState({
+            activeBoard: found,
+            activeBoardId: found.id,
+          });
+        }
+      }
+
+      // falls back to feaure dboard if it cant find a board
       const { activeBoard, featuredBoard } = useBoardStore.getState();
       if (!activeBoard && featuredBoard) {
         useBoardStore.setState({
@@ -66,4 +73,3 @@ export default function Home() {
     </main>
   );
 }
-

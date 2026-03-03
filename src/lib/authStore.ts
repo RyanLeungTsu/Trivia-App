@@ -38,33 +38,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
-  await supabase.auth.signOut();
-  set({ user: null });
+    await supabase.auth.signOut();
+    set({ user: null });
 
-  const { useBoardStore } = await import("../store/editorStore");
-  
-  // clear boards from memory so Supabase boards don't persist once signed out
-  useBoardStore.setState({
-    boards: [],
-    activeBoard: null,
-    activeBoardId: null,
-  });
+    const { useBoardStore } = await import("../store/editorStore");
 
-  // reloads as local when signing out
-  useBoardStore.getState().loadBoards();
-},
+    // clear boards from memory so Supabase boards don't persist once signed out
+    useBoardStore.setState({
+      boards: [],
+      activeBoard: null,
+      activeBoardId: null,
+    });
+
+    // reloads as local when signing out
+    useBoardStore.getState().loadBoards();
+  },
 
   init: () => {
-    // Check existing session
     supabase.auth.getSession().then(({ data }) => {
       set({ user: data.session?.user ?? null, loading: false });
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      set({ user: session?.user ?? null });
-      const { useBoardStore } = await import("../store/editorStore");
-      useBoardStore.getState().loadBoards();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const user = session?.user ?? null;
+      set({ user, loading: false });
+
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        const { useBoardStore } = await import("../store/editorStore");
+        useBoardStore.getState().loadBoards();
+      }
     });
 
     return () => subscription.unsubscribe();

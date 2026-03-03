@@ -76,7 +76,16 @@ const Interface: React.FC = () => {
   if (!activeBoard) return null;
   return (
     <>
-      {/* left side ui for players */}
+      {/* left side ui for players/tooltips */}
+      <div className="fixed top-4 left-4 z-50 text-lg" >
+            <a
+              style={{ color: "var(--text)" }}
+              href="https://buzzin.live"
+              target="_blank"
+            >
+              Click here for buzzer!
+            </a>
+      </div>
       {expanded && (
         <div className="fixed left-0 top-1/2 transform -translate-y-1/2 w-50 bg-black/20 rounded-lg shadow-xl p-4 ml-2 z-100">
           <button
@@ -163,7 +172,7 @@ const Interface: React.FC = () => {
       <div className="fixed right-0 top-1/2 transform -translate-y-1/2 flex flex-col gap-3 z-50">
         <button
           onClick={() => setEditMode(!editMode)}
-          className={` w-40 ml-4 mr-4 relative inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-bold group ${editMode ? "bg-gradient-to-br from-green-600 to-lime-400" : "bg-gradient-to-br from-yellow-600 to-amber-500"} ${editMode ? "text-green-500" : "text-amber-400"}  focus:outline-none focus:ring-0  hover:text-white `}
+          className={` w-40 ml-4 mr-4 relative inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-bold group ${editMode ? "bg-gradient-to-br from-green-600 to-lime-400" : "bg-gradient-to-br from-yellow-300 to-amber-700"} ${editMode ? "text-green-500" : "text-amber-400"}  focus:outline-none focus:ring-0  hover:text-white `}
         >
           <span className="w-full relative px-4 py-2.5 transition-all ease-in duration-350 bg-white group-hover:bg-transparent">
             {editMode ? "Save" : "Edit"}

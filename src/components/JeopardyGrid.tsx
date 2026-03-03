@@ -15,13 +15,17 @@ const JeopardyGrid: React.FC = () => {
     removeRowAt,
     addColumnAt,
     removeColumnAt,
+    setFinalJeopardy,
+    removeFinalJeopardy,
   } = useBoardStore();
 
   if (!activeBoard) return null;
 
+  const rowHeight = 700 / (activeBoard.rows + 1);
+
   return (
-    <div className="p-4 flex items-center justify-center">
-      <div className="relative">
+    <div className="p-4 flex flex-col items-center justify-center">
+      <div className="relative w-full max-w-[1400px]">
         {editMode && (
           <>
             <div
@@ -32,9 +36,7 @@ const JeopardyGrid: React.FC = () => {
                 <div
                   key={`col-btn-${i}`}
                   className="flex gap-1 items-center justify-end pr-1"
-                  style={{
-                    width: `${100 / activeBoard.columns}%`,
-                  }}
+                  style={{ width: `${100 / activeBoard.columns}%` }}
                 >
                   <button
                     onClick={() => addColumnAt(i)}
@@ -66,9 +68,7 @@ const JeopardyGrid: React.FC = () => {
                 <div
                   key={`row-btn-${i}`}
                   className="flex gap-1 items-center justify-center"
-                  style={{
-                    height: `${100 / activeBoard.rows}%`,
-                  }}
+                  style={{ height: `${100 / activeBoard.rows}%` }}
                 >
                   <button
                     onClick={() => addRowAt(i)}
@@ -91,7 +91,7 @@ const JeopardyGrid: React.FC = () => {
         )}
 
         <div
-          className="grid w-full h-[700px] max-w-[1400px]"
+          className="grid w-full h-[700px]"
           style={{
             gridTemplateRows: `repeat(${activeBoard.rows + 1}, 1fr)`,
             gridTemplateColumns: `repeat(${activeBoard.columns}, 1fr)`,
@@ -126,7 +126,6 @@ const JeopardyGrid: React.FC = () => {
                       elements: s.elements.map((el) => ({ ...el })),
                     })),
                   });
-
                   if (!editMode) markCellUsed(cell);
                 }}
                 className={`border border-gray-400 font-bold flex items-center justify-center cursor-pointer text-center px-1 break-words transition relative
@@ -134,7 +133,6 @@ const JeopardyGrid: React.FC = () => {
                 style={{
                   gridRow: cell.row + 2,
                   gridColumn: cell.col + 1,
-
                 }}
               >
                 {editMode ? (
@@ -157,7 +155,82 @@ const JeopardyGrid: React.FC = () => {
             );
           })}
         </div>
+        {/* Final Jeopardy cell */}
+        {activeBoard.finalJeopardy && (
+          <div
+            onClick={() => {
+              if (editMode) return;
+              if (!activeBoard.finalJeopardy) return;
+              selectCell({
+                ...activeBoard.finalJeopardy,
+                slides: activeBoard.finalJeopardy.slides.map((s) => ({
+                  elements: s.elements.map((el) => ({ ...el })),
+                })),
+              });
+              markCellUsed(activeBoard.finalJeopardy);
+            }}
+            className={`w-full flex items-center justify-center font-bold text-2xl transition border border-gray-400
+      ${editMode ? "cursor-default" : "cursor-pointer hover:bg-blue-600"}
+      ${
+        activeBoard.usedCells[
+          `${activeBoard.finalJeopardy.row}-${activeBoard.finalJeopardy.col}`
+        ]
+          ? "bg-gray-400 text-white"
+          : "bg-blue-500 text-white"
+      }`}
+            style={{ height: `${rowHeight}px` }}
+          >
+            {editMode ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFinalJeopardy();
+                  }}
+                  className=" bg-red-500 text-white text-sm px-3 py-1 rounded hover:bg-red-600 ml-5"
+                >
+                  Remove
+                </button>
+            ) : (
+              <span>Final Jeopardy</span>
+            )}
+          </div>
+        )}
       </div>
+
+    {/* Adding Final jeopardy button */}
+      {editMode && !activeBoard.finalJeopardy && (
+        <button
+          onClick={() => {
+            setFinalJeopardy({
+              row: activeBoard.rows + 1,
+              col: 0,
+              points: 0,
+              slides: [
+                {
+                  elements: [
+                    {
+                      id: crypto.randomUUID(),
+                      kind: "text",
+                      content: "",
+                      x: 20,
+                      y: 20,
+                      width: 500,
+                      height: 300,
+                      fontSize: 40,
+                    },
+                  ],
+                },
+              ],
+            });
+          }}
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-bold group bg-gradient-to-br from-amber-700 to-yellow-300 text-amber-700 hover:text-white focus:outline-none focus:ring-0 z-50"
+        >
+          <span className="w-full relative px-8 py-3 transition-all ease-in duration-350 bg-gray-100 group-hover:bg-transparent">
+            + Add Final Jeopardy
+          </span>
+        </button>
+      )}
+
       {/* Slides modal */}
       {selectedCell && (
         <Slides cell={selectedCell} close={() => selectCell(null)} />

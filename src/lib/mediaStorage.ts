@@ -1,6 +1,7 @@
 import { supabase } from "./supabaseClient";
 import { useAuthStore } from "./authStore";
 
+const urlCache = new Map<string, { url: string; expires: number }>();
 // interface MediaDB extends DBSchema {
 //   media: {
 //     key: string;
@@ -11,6 +12,8 @@ import { useAuthStore } from "./authStore";
 const DB_NAME = 'jeopardy-media';
 const DB_VERSION = 1;
 const STORE_NAME = 'media';
+
+
 
 // let dbInstance: IDBPDatabase<MediaDB> | null = null;
 
@@ -75,18 +78,37 @@ export async function saveMedia(id: string, file: File): Promise<void> {
   }
 }
 
-
-// Retrieve a media file from IndexedDB, @returns A URL that can be used in img/video/audio src attributes
+// Retrieves a media file from IndexedDB, @returns A URL that can be used in img/video/audio src attributes
 export async function getMedia(id: string): Promise<string | null> {
   const user = useAuthStore.getState().user;
+
   if (user) {
-    // check if it's a supabase path (has user id prefix) or a local idb id
+    // checks the cache first
+    const cached = urlCache.get(id);
+    if (cached && cached.expires > Date.now()) {
+      return cached.url;
+    }
+
     const path = `${user.id}/${id}`;
-    const { data, error } = await supabase.storage.from("media").createSignedUrl(path, 3600);
-    if (error || !data) return null;
-    return data.signedUrl;
+    const { data, error } = await supabase.storage
+      .from("media")
+      .createSignedUrl(path, 3600);
+
+    if (!error && data?.signedUrl) {
+      urlCache.set(id, { url: data.signedUrl, expires: Date.now() + 50 * 60 * 1000 });
+      return data.signedUrl;
+    }
+
+    const localUrl = await getMediaLocal(id);
+    if (localUrl) return localUrl;
+
+    console.error(`Media not found anywhere: ${id}`);
+    return null;
+
   } else {
-    return getMediaLocal(id);
+    const localUrl = await getMediaLocal(id);
+    if (!localUrl) console.error(`Media not found in IndexedDB: ${id}`);
+    return localUrl;
   }
 }
 

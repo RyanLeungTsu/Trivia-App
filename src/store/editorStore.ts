@@ -35,6 +35,7 @@ export interface Board {
   categories: string[];
   cells: JeopardyCell[];
   usedCells: { [key: string]: boolean };
+  finalJeopardy?: JeopardyCell | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -74,6 +75,9 @@ interface BoardState {
   removeRowAt: (rowIndex: number) => void;
   addColumnAt: (colIndex: number) => void;
   removeColumnAt: (colIndex: number) => void;
+
+  setFinalJeopardy: (cell: JeopardyCell | null) => void;
+  removeFinalJeopardy: () => void;
 
   // categories: string[];
   // setCategories: (cats: string[]) => void;
@@ -241,66 +245,65 @@ export const useBoardStore = create<BoardState>((set, get) => {
     },
     // Loads boards from Supabase when user signs in, or from localStorage for guests
     loadBoards: async () => {
-      const user = useAuthStore.getState().user;
+      await new Promise((r) => setTimeout(r, 50));
+      const { user } = useAuthStore.getState();
+      console.log("loadBoards called, user:", user?.email); 
+  console.log("local boards:", localStorage.getItem("jeopardyBoards"));
+
       if (user) {
-        const { data, error } = await supabase
+        const localRaw = localStorage.getItem("jeopardyBoards");
+        const localBoards: Board[] = localRaw ? JSON.parse(localRaw) : [];
+
+        const { data } = await supabase
           .from("boards")
-          .select("data")
+          .select("*")
           .eq("user_id", user.id)
-          .order("created_at", { ascending: true });
+          .order("updated_at", { ascending: false });
 
-        if (error) {
-          console.error("Error loading boards from Supabase:", error);
-          return;
+        const supabaseBoards: Board[] = (data ?? []).map((r) => r.data);
+        const supabaseIds = new Set(supabaseBoards.map((b) => b.id));
+
+        const migratedRaw = localStorage.getItem("migratedBoardIds");
+        const migratedIds: Set<string> = new Set(
+          migratedRaw ? JSON.parse(migratedRaw) : [],
+        );
+
+        const toMigrate = localBoards.filter(
+          (b) => !supabaseIds.has(b.id) && !migratedIds.has(b.id),
+        );
+
+        if (toMigrate.length > 0) {
+          await Promise.all(
+            toMigrate.map((board) =>
+              supabase.from("boards").upsert({
+                id: board.id,
+                user_id: user.id,
+                data: board,
+                updated_at: board.updatedAt ?? Date.now(),
+              }),
+            ),
+          );
+
+          toMigrate.forEach((b) => migratedIds.add(b.id));
+          localStorage.setItem(
+            "migratedBoardIds",
+            JSON.stringify([...migratedIds]),
+          );
         }
 
-        const loadedBoards: Board[] =
-          data?.map((row) => row.data as Board) ?? [];
-
-        if (loadedBoards.length === 0) {
-          // check first to see if local baords exists then move to migrate if they do
-          const localData =
-            typeof window !== "undefined"
-              ? localStorage.getItem("jeopardyBoards")
-              : null;
-          const localBoards: Board[] = localData ? JSON.parse(localData) : [];
-
-          if (localBoards.length > 0) {
-            // this allows the app to migrate local boards up to Supabase so you do not lose any progress
-            set({
-              boards: localBoards,
-              activeBoardId: localBoards[0].id,
-              activeBoard: localBoards[0],
-            });
-            persistBoards(localBoards).catch(console.error);
-            localStorage.removeItem("jeopardyBoards");
-          } else {
-            const defaultBoard = createEmptyBoard("Untitled Board");
-            set({
-              boards: [defaultBoard],
-              activeBoardId: defaultBoard.id,
-              activeBoard: defaultBoard,
-            });
-            persistBoards([defaultBoard]).catch(console.error);
-          }
-        } else {
-          set({
-            boards: loadedBoards,
-            activeBoardId: loadedBoards[0].id,
-            activeBoard: loadedBoards[0],
-          });
-        }
-      } else {
-        const savedBoards =
-          typeof window !== "undefined"
-            ? localStorage.getItem("jeopardyBoards")
-            : null;
-        const localBoards: Board[] = savedBoards ? JSON.parse(savedBoards) : [];
+        const { activeBoardId } = get();
+        const stillExists = supabaseBoards.find((b) => b.id === activeBoardId);
+        const active = stillExists ?? supabaseBoards[0] ?? null;
         set({
-          boards: localBoards,
-          activeBoardId: localBoards.length > 0 ? localBoards[0].id : null,
-          activeBoard: localBoards.length > 0 ? localBoards[0] : null,
+          boards: supabaseBoards,
+          activeBoard: active,
+          activeBoardId: active?.id ?? null,
         });
+      } else {
+        const raw = localStorage.getItem("jeopardyBoards");
+        const boards: Board[] = raw ? JSON.parse(raw) : [];
+        const active = boards[0] ?? null;
+        set({ boards, activeBoard: active, activeBoardId: active?.id ?? null });
       }
     },
 
@@ -331,6 +334,30 @@ export const useBoardStore = create<BoardState>((set, get) => {
       updateActiveBoard(updatedBoard);
     },
 
+    setFinalJeopardy: (cell) => {
+      const { activeBoard } = get();
+      if (!activeBoard) return;
+      const updated = {
+        ...activeBoard,
+        finalJeopardy: cell,
+        updatedAt: Date.now(),
+      };
+      set({ activeBoard: updated });
+      get().updateActiveBoard(updated);
+    },
+
+    removeFinalJeopardy: () => {
+      const { activeBoard } = get();
+      if (!activeBoard) return;
+      const updated = {
+        ...activeBoard,
+        finalJeopardy: null,
+        updatedAt: Date.now(),
+      };
+      set({ activeBoard: updated });
+      get().updateActiveBoard(updated);
+    },
+
     createBoard: (name) => {
       const { boards } = get();
 
@@ -354,11 +381,11 @@ export const useBoardStore = create<BoardState>((set, get) => {
       });
     },
 
-    setActiveBoard: (id) =>
-      set((state) => ({
-        activeBoardId: id,
-        activeBoard: state.boards.find((b) => b.id === id) || null,
-      })),
+    setActiveBoard: (id: string) => {
+      const board = get().boards.find((b) => b.id === id) ?? null;
+      set({ activeBoardId: id, activeBoard: board });
+      localStorage.setItem("lastBoardId", id);
+    },
 
     updateActiveBoard: (updatedBoard) => {
       set((state) => {

@@ -150,25 +150,32 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
   }, [editing, slides, currentSlideIndex]);
 
   const handleClose = () => {
-    if (unsavedSlide && !confirm("You have unsaved changes. Close anyway?")) {
-      return;
-    }
+  if (unsavedSlide && !confirm("You have unsaved changes. Close anyway?")) {
+    return;
+  }
 
+  const updatedCell: JeopardyCell = {
+    row: cell.row,
+    col: cell.col,
+    points: cell.points,
+    slides: slides,
+  };
 
-    const updatedCell: JeopardyCell = {
-      row: cell.row,
-      col: cell.col,
-      points: cell.points,
-      slides: slides, 
-    };
+  const { activeBoard, setFinalJeopardy } = useBoardStore.getState();
+  const isFinalJeopardy =
+    activeBoard?.finalJeopardy?.row === cell.row &&
+    activeBoard?.finalJeopardy?.col === cell.col;
 
+  if (isFinalJeopardy) {
+    setFinalJeopardy(updatedCell);
+  } else {
     setStagedCell(updatedCell);
-    
     const { commitStagedCell } = useBoardStore.getState();
     commitStagedCell();
+  }
 
-    close();
-  };
+  close();
+};
 
   return (
     <div className="fixed inset-0 bg-gray-900 bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-999">
