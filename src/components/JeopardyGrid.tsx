@@ -130,10 +130,11 @@ const JeopardyGrid: React.FC = () => {
                   if (!editMode) markCellUsed(cell);
                 }}
                 className={`border border-gray-400 font-bold flex items-center justify-center cursor-pointer text-center px-1 break-words transition relative
-                  ${isUsed ? "bg-gray-400 text-gray-700" : "bg-blue-500 text-white hover:bg-blue-600"}`}
+                  ${isUsed ? "bg-gray-400 text-gray-500" : "bg-blue-500 text-white hover:bg-blue-600"}`}
                 style={{
                   gridRow: cell.row + 2,
                   gridColumn: cell.col + 1,
+
                 }}
               >
                 {editMode ? (

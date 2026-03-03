@@ -171,9 +171,9 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white p-4 rounded w-[90vw] h-[90vh] max-w-[1400px] overflow-y-auto relative">
-        <div className="relative w-full h-[70vh] bg-white border-3 border-blue-400 mb-4">
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-999">
+      <div className="p-4 rounded w-[90vw] h-[90vh] max-w-[1400px] overflow-y-auto relative"style={{ backgroundColor: "transparent", color:"var(--ui-text)"  }}>
+        <div className="relative w-full h-[70vh] border-3 border-blue-400 mb-4"style={{ backgroundColor: "var(--ui-bg)", color:"var(--ui-text)"  }}>
           {currentSlide.elements.map((el) =>
             editing ? (
               <Rnd
@@ -217,12 +217,14 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
                       </div>
 
                       <textarea
-                        className="w-full h-full resize-none bg-transparent text-black p-1"
+                        className="w-full h-full resize-none bg-transparent p-1" 
                         value={el.content}
                         style={{
                           fontSize: el.fontSize ?? DefaultFontSize,
                           textAlign: el.textAlign ?? "left",
                           boxSizing: "border-box",
+                          backgroundColor: "var(--ui-bg)",
+                          color: "var(--text)"
                         }}
                         onMouseDown={(e) => e.stopPropagation()}
                         onChange={(e) =>
@@ -306,6 +308,7 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
                           maxWidth: "none",
                           maxHeight: "none",
                           display: "block",
+                          color: "var(--text)"
                         }}
                       />
                       <button
@@ -327,6 +330,7 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
                   top: el.y,
                   width: el.width,
                   height: el.height,
+                  
                 }}
               >
                 {el.kind === "text" && (
@@ -335,11 +339,12 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
                       width: "100%",
                       height: "100%",
                       fontSize: el.fontSize ?? DefaultFontSize,
-                      color: "black",
+                      color: "var(--text)",
                       textAlign: el.textAlign ?? "left",
                       whiteSpace: "pre-wrap",
                       padding: 4,
                       boxSizing: "border-box",
+                      
                     }}
                   >
                     {el.content}

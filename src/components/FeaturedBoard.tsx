@@ -7,7 +7,13 @@ import { useAuthStore } from "../lib/authStore";
 const ADMIN_USER_ID = "33f2fb59-e2fd-4271-89e6-79306974503b";
 
 const FeaturedBoard: React.FC = () => {
-  const { featuredBoard, setActiveBoard, boards, publishAsFeaturedBoard, activeBoard } = useBoardStore();
+  const {
+    featuredBoard,
+    setActiveBoard,
+    boards,
+    publishAsFeaturedBoard,
+    activeBoard,
+  } = useBoardStore();
   const { user } = useAuthStore();
 
   const isAdmin = user?.id === ADMIN_USER_ID;
@@ -29,8 +35,12 @@ const FeaturedBoard: React.FC = () => {
 
   return (
     <div className="fixed top-0 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 bg-transparent px-4 py-2">
-      <span className="text-sm font-bold text-blue-700">Featured Board:</span>
-      <span className="text-sm text-gray-800">{featuredBoard.name}</span>
+      <span className="text-lg font-bold" style={{ color: "var(--text)" }}>
+        Featured Board:
+      </span>
+      <span className="text-med" style={{ color: "var(--text)" }}>
+        {featuredBoard.name}
+      </span>
       <button
         onClick={loadFeaturedBoard}
         className="w-20 inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-bold text-heading group bg-gradient-to-br from-purple-700 to-orange-400 text-purple-500 hover:text-white focus:outline-none focus:ring-0"
@@ -43,14 +53,19 @@ const FeaturedBoard: React.FC = () => {
       {isAdmin && (
         <button
           onClick={() => {
-            if (!confirm(`Publish "${activeBoard?.name}" as the new featured board? This replaces the current one.`)) return;
+            if (
+              !confirm(
+                `Publish "${activeBoard?.name}" as the new featured board? This replaces the current one.`,
+              )
+            )
+              return;
             publishAsFeaturedBoard();
           }}
           className="w-40 inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-bold text-heading group bg-gradient-to-br from-purple-700 to-orange-400 text-purple-500 hover:text-white focus:outline-none focus:ring-0"
-      >
-        <span className="w-full relative px-4 py-2 transition-all ease-in duration-350 bg-gray-100 group-hover:bg-transparent">
-          Publish Current
-        </span>
+        >
+          <span className="w-full relative px-4 py-2 transition-all ease-in duration-350 bg-gray-100 group-hover:bg-transparent">
+            Publish Current
+          </span>
         </button>
       )}
     </div>

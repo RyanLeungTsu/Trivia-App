@@ -5,6 +5,37 @@ const SHOOTING_COUNT = 12;
 const STATIC_STAR_COUNT = 220;
 const CLOUD_COUNT = 7;
 
+const nightVars = {
+  "--text": "#ffffff",
+  "--board-cell": "#2370DE",
+  "--used-cell": "#5C5C5C",
+  "--special-cell": "#CF1515",
+  "--board-header": "#111827",
+  "--board-border": "#f59e0b",
+  "--ui-bg": "#212121",
+  "--ui-bg-alpha": "rgba(33, 33, 33, 0.6)",
+  "--ui-text": "#ffffff",
+};
+
+const dayVars = {
+  "--text": "#0c4a6e",
+  "--board-cell": "#2B7FFF",
+  "--used-cell": "#5C5C5C2",
+  "--special-cell": "#CF1515",
+  "--board-header": "#0c4a6e",
+  "--board-border": "#fbbf24",
+  "--ui-bg": "#ffffff",
+  "--ui-text": "#ffffff",
+};
+
+function applyThemeVars(theme: Theme) {
+  const vars = theme === "day" ? dayVars : nightVars;
+  document.documentElement.style.transition = "background-color 2s ease, color 2s ease";
+  Object.entries(vars).forEach(([key, val]) => {
+    document.documentElement.style.setProperty(key, val);
+  });
+}
+
 interface ShootingStar {
   x: number; y: number;
   length: number; speed: number;
@@ -80,25 +111,50 @@ function makeCloud(offscreen = false, w = 1920, h = 900): Cloud {
   };
 }
 
+function drawPuff(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number,
+  rx: number, ry: number,
+  brightness: number, 
+  alpha: number
+) {
+  const g = ctx.createRadialGradient(cx, cy - ry * 0.15, 0, cx, cy, Math.max(rx, ry));
+  g.addColorStop(0,    `rgba(255,255,255,${alpha * brightness})`);
+  g.addColorStop(0.35, `rgba(248,252,255,${alpha * brightness * 0.88})`);
+  g.addColorStop(0.65, `rgba(230,243,255,${alpha * brightness * 0.55})`);
+  g.addColorStop(0.85, `rgba(210,232,252,${alpha * brightness * 0.22})`);
+  g.addColorStop(1,    `rgba(200,225,250,0)`);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function drawLargeCloud(
   ctx: CanvasRenderingContext2D,
   x: number, y: number,
   sx: number, sy: number,
   alpha: number
 ) {
-
   ctx.save();
-  ctx.globalAlpha = alpha * 0.18;
-  ctx.filter = "blur(18px)";
-  ctx.fillStyle = "rgba(140,185,230,1)";
-  const bubbles = [
-    { dx: 0, dy: 12, rx: 90, ry: 40 },
-    { dx: 110, dy: 0, rx: 110, ry: 55 },
-    { dx: 240, dy: 8, rx: 95, ry: 48 },
-    { dx: 340, dy: 18, rx: 80, ry: 38 },
-    { dx: -60, dy: 18, rx: 70, ry: 32 },
-  ];
-  bubbles.forEach(({ dx, dy, rx, ry }) => {
+
+  ctx.globalAlpha = alpha * 0.55;
+  ctx.filter = "blur(28px)";
+  [
+    { dx: 30,  dy: 55,  rx: 260, ry: 80  },
+    { dx: 200, dy: 45,  rx: 220, ry: 70  },
+    { dx: 370, dy: 52,  rx: 200, ry: 72  },
+    { dx: -60, dy: 60,  rx: 160, ry: 60  },
+    { dx: 520, dy: 58,  rx: 150, ry: 58  },
+  ].forEach(({ dx, dy, rx, ry }) => {
+    const g = ctx.createRadialGradient(
+      x + dx * sx, y + dy * sy, 0,
+      x + dx * sx, y + dy * sy, Math.max(rx * sx, ry * sy)
+    );
+    g.addColorStop(0,   "rgba(210,235,255,0.9)");
+    g.addColorStop(0.5, "rgba(195,222,248,0.5)");
+    g.addColorStop(1,   "rgba(185,215,245,0)");
+    ctx.fillStyle = g;
     ctx.beginPath();
     ctx.ellipse(x + dx * sx, y + dy * sy, rx * sx, ry * sy, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -107,35 +163,57 @@ function drawLargeCloud(
   ctx.restore();
 
   ctx.save();
-  ctx.globalAlpha = alpha;
 
-  const grad = ctx.createRadialGradient(
-    x + 140 * sx, y - 10 * sy, 0,
-    x + 140 * sx, y + 30 * sy, 180 * Math.max(sx, sy)
-  );
-  grad.addColorStop(0, "rgba(255,255,255,1)");
-  grad.addColorStop(0.6, "rgba(240,248,255,0.95)");
-  grad.addColorStop(1, "rgba(200,230,255,0.7)");
-  ctx.fillStyle = grad;
-  ctx.shadowColor = "rgba(180,215,255,0.5)";
-  ctx.shadowBlur = 20;
-
-  const mainBubbles = [
-    { dx: 0,   dy: 0,   rx: 70,  ry: 42 },
-    { dx: 80,  dy: -30, rx: 90,  ry: 58 },
-    { dx: 175, dy: -20, rx: 80,  ry: 50 },
-    { dx: 255, dy: -10, rx: 70,  ry: 44 },
-    { dx: 320, dy: 5,   rx: 58,  ry: 36 },
-    { dx: -50, dy: 5,   rx: 55,  ry: 34 },
-    { dx: 120, dy: 10,  rx: 65,  ry: 35 },
-    { dx: 200, dy: 12,  rx: 60,  ry: 32 },
-  ];
-  mainBubbles.forEach(({ dx, dy, rx, ry }) => {
-    ctx.beginPath();
-    ctx.ellipse(x + dx * sx, y + dy * sy, rx * sx, ry * sy, 0, 0, Math.PI * 2);
-    ctx.fill();
+  ctx.globalAlpha = alpha * 0.72;
+  ctx.filter = "blur(14px)";
+  [
+    { dx: 0,   dy: 40,  rx: 180, ry: 70  },
+    { dx: 120, dy: 20,  rx: 200, ry: 90  },
+    { dx: 280, dy: 28,  rx: 185, ry: 82  },
+    { dx: 420, dy: 38,  rx: 165, ry: 68  },
+    { dx: -40, dy: 42,  rx: 140, ry: 62  },
+    { dx: 550, dy: 44,  rx: 130, ry: 58  },
+    { dx: 180, dy: 50,  rx: 155, ry: 58  },
+    { dx: 340, dy: 45,  rx: 145, ry: 60  },
+  ].forEach(({ dx, dy, rx, ry }) => {
+    drawPuff(ctx, x + dx * sx, y + dy * sy, rx * sx, ry * sy, 0.9, 1);
   });
+  ctx.filter = "none";
+  ctx.restore();
 
+  ctx.save();
+
+  ctx.globalAlpha = alpha;
+  ctx.filter = "blur(4px)";
+  [
+    { dx: 0,   dy: 0,   rx: 100, ry: 88  },
+    { dx: 85,  dy: -35, rx: 125, ry: 108 },
+    { dx: 195, dy: -50, rx: 118, ry: 100 },
+    { dx: 300, dy: -30, rx: 110, ry: 94  },
+    { dx: 390, dy: -10, rx: 98,  ry: 84  },
+    { dx: 470, dy: 10,  rx: 88,  ry: 74  },
+    { dx: -55, dy: 10,  rx: 82,  ry: 70  },
+    { dx: 140, dy: -20, rx: 92,  ry: 78  },
+    { dx: 248, dy: -15, rx: 88,  ry: 76  },
+    { dx: 345, dy: 5,   rx: 82,  ry: 70  },
+  ].forEach(({ dx, dy, rx, ry }) => {
+    drawPuff(ctx, x + dx * sx, y + dy * sy, rx * sx, ry * sy, 1, 1);
+  });
+  ctx.filter = "none";
+  ctx.restore();
+
+  ctx.save();
+
+  ctx.globalAlpha = alpha * 0.9;
+  ctx.filter = "blur(2px)";
+  [
+    { dx: 85,  dy: -55, rx: 65, ry: 52 },
+    { dx: 195, dy: -70, rx: 72, ry: 58 },
+    { dx: 300, dy: -48, rx: 60, ry: 48 },
+  ].forEach(({ dx, dy, rx, ry }) => {
+    drawPuff(ctx, x + dx * sx, y + dy * sy, rx * sx, ry * sy, 1, 1);
+  });
+  ctx.filter = "none";
   ctx.restore();
 }
 
@@ -146,23 +224,55 @@ function drawWispyCloud(
   alpha: number
 ) {
   ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.filter = "blur(3px)";
 
-  const wisps = [
-    { dx: 0,   dy: 0,  rx: 120, ry: 10 },
-    { dx: 100, dy: -6, rx: 80,  ry: 7  },
-    { dx: 200, dy: 2,  rx: 100, ry: 9  },
-    { dx: -40, dy: 3,  rx: 60,  ry: 6  },
-    { dx: 280, dy: -3, rx: 70,  ry: 8  },
-  ];
-  wisps.forEach(({ dx, dy, rx, ry }) => {
-    ctx.beginPath();
-    ctx.ellipse(x + dx * sx, y + dy * sy, rx * sx, ry * sy, 0, 0, Math.PI * 2);
-    ctx.fill();
+  ctx.globalAlpha = alpha * 0.5;
+  ctx.filter = "blur(22px)";
+  [
+    { dx: 0,   dy: 0,  rx: 220, ry: 55 },
+    { dx: 180, dy: -8, rx: 190, ry: 48 },
+    { dx: 340, dy: 5,  rx: 175, ry: 52 },
+    { dx: -80, dy: 8,  rx: 140, ry: 42 },
+    { dx: 490, dy: -4, rx: 130, ry: 40 },
+  ].forEach(({ dx, dy, rx, ry }) => {
+    drawPuff(ctx, x + dx * sx, y + dy * sy, rx * sx, ry * sy, 0.85, 1);
   });
+  ctx.filter = "none";
+  ctx.restore();
 
+  ctx.save();
+
+  ctx.globalAlpha = alpha * 0.78;
+  ctx.filter = "blur(10px)";
+  [
+    { dx: 0,   dy: 0,   rx: 150, ry: 42 },
+    { dx: 110, dy: -12, rx: 165, ry: 48 },
+    { dx: 240, dy: -5,  rx: 155, ry: 44 },
+    { dx: 360, dy: 2,   rx: 140, ry: 40 },
+    { dx: -50, dy: 5,   rx: 110, ry: 36 },
+    { dx: 470, dy: -2,  rx: 105, ry: 34 },
+    { dx: 165, dy: 8,   rx: 120, ry: 35 },
+    { dx: 295, dy: 6,   rx: 115, ry: 34 },
+  ].forEach(({ dx, dy, rx, ry }) => {
+    drawPuff(ctx, x + dx * sx, y + dy * sy, rx * sx, ry * sy, 0.92, 1);
+  });
+  ctx.filter = "none";
+  ctx.restore();
+
+  ctx.save();
+
+  ctx.globalAlpha = alpha * 0.88;
+  ctx.filter = "blur(3px)";
+  [
+    { dx: 0,   dy: -5,  rx: 80, ry: 50 },
+    { dx: 75,  dy: -20, rx: 90, ry: 58 },
+    { dx: 165, dy: -15, rx: 85, ry: 54 },
+    { dx: 248, dy: -8,  rx: 80, ry: 50 },
+    { dx: 328, dy: -2,  rx: 74, ry: 46 },
+    { dx: 400, dy: 5,   rx: 68, ry: 42 },
+    { dx: -40, dy: 5,   rx: 65, ry: 40 },
+  ].forEach(({ dx, dy, rx, ry }) => {
+    drawPuff(ctx, x + dx * sx, y + dy * sy, rx * sx, ry * sy, 1, 1);
+  });
   ctx.filter = "none";
   ctx.restore();
 }
@@ -174,30 +284,56 @@ function drawMidCloud(
   alpha: number
 ) {
   ctx.save();
-  ctx.globalAlpha = alpha;
 
-  const grad = ctx.createRadialGradient(
-    x + 60 * sx, y - 5 * sy, 0,
-    x + 60 * sx, y + 20 * sy, 100 * Math.max(sx, sy)
-  );
-  grad.addColorStop(0, "rgba(255,255,255,1)");
-  grad.addColorStop(1, "rgba(215,235,255,0.75)");
-  ctx.fillStyle = grad;
-  ctx.shadowColor = "rgba(180,215,255,0.4)";
-  ctx.shadowBlur = 12;
-
-  const bs = [
-    { dx: 0,   dy: 0,   rx: 48, ry: 28 },
-    { dx: 55,  dy: -18, rx: 58, ry: 36 },
-    { dx: 115, dy: -8,  rx: 50, ry: 30 },
-    { dx: 160, dy: 4,   rx: 42, ry: 25 },
-    { dx: -30, dy: 4,   rx: 38, ry: 22 },
-  ];
-  bs.forEach(({ dx, dy, rx, ry }) => {
-    ctx.beginPath();
-    ctx.ellipse(x + dx * sx, y + dy * sy, rx * sx, ry * sy, 0, 0, Math.PI * 2);
-    ctx.fill();
+  ctx.globalAlpha = alpha * 0.5;
+  ctx.filter = "blur(20px)";
+  [
+    { dx: 0,   dy: 30, rx: 140, ry: 60 },
+    { dx: 120, dy: 20, rx: 155, ry: 65 },
+    { dx: 240, dy: 28, rx: 138, ry: 58 },
+    { dx: -40, dy: 32, rx: 110, ry: 50 },
+    { dx: 340, dy: 30, rx: 105, ry: 48 },
+  ].forEach(({ dx, dy, rx, ry }) => {
+    drawPuff(ctx, x + dx * sx, y + dy * sy, rx * sx, ry * sy, 0.88, 1);
   });
+  ctx.filter = "none";
+  ctx.restore();
+
+  ctx.save();
+
+  ctx.globalAlpha = alpha * 0.80;
+  ctx.filter = "blur(10px)";
+  [
+    { dx: 0,   dy: 18, rx: 105, ry: 55 },
+    { dx: 95,  dy: 8,  rx: 118, ry: 62 },
+    { dx: 195, dy: 14, rx: 108, ry: 56 },
+    { dx: 285, dy: 20, rx: 96,  ry: 50 },
+    { dx: -35, dy: 22, rx: 85,  ry: 46 },
+    { dx: 365, dy: 22, rx: 82,  ry: 44 },
+    { dx: 145, dy: 22, rx: 90,  ry: 44 },
+    { dx: 240, dy: 24, rx: 88,  ry: 42 },
+  ].forEach(({ dx, dy, rx, ry }) => {
+    drawPuff(ctx, x + dx * sx, y + dy * sy, rx * sx, ry * sy, 0.94, 1);
+  });
+  ctx.filter = "none";
+  ctx.restore();
+
+  ctx.save();
+
+  ctx.globalAlpha = alpha;
+  ctx.filter = "blur(3px)";
+  [
+    { dx: 0,   dy: 0,   rx: 68, ry: 52 },
+    { dx: 62,  dy: -22, rx: 78, ry: 60 },
+    { dx: 138, dy: -15, rx: 72, ry: 56 },
+    { dx: 208, dy: -5,  rx: 66, ry: 50 },
+    { dx: 270, dy: 5,   rx: 60, ry: 46 },
+    { dx: -30, dy: 5,   rx: 56, ry: 44 },
+    { dx: 320, dy: 8,   rx: 55, ry: 42 },
+  ].forEach(({ dx, dy, rx, ry }) => {
+    drawPuff(ctx, x + dx * sx, y + dy * sy, rx * sx, ry * sy, 1, 1);
+  });
+  ctx.filter = "none";
   ctx.restore();
 }
 
@@ -228,6 +364,7 @@ const DayNightBackground: React.FC<DayNightBackgroundProps> = ({ onThemeChange }
     const init = getInitialTheme();
     progressRef.current = init === "day" ? 1 : 0;
     targetRef.current   = init === "day" ? 1 : 0;
+    applyThemeVars(init);
   }, []);
 
   const toggleTheme = () => {
@@ -235,6 +372,7 @@ const DayNightBackground: React.FC<DayNightBackgroundProps> = ({ onThemeChange }
     setTheme(next);
     targetRef.current = next === "day" ? 1 : 0;
     localStorage.setItem("theme", next);
+    applyThemeVars(next);
     onThemeChange?.(next);
   };
 
@@ -266,17 +404,17 @@ const DayNightBackground: React.FC<DayNightBackgroundProps> = ({ onThemeChange }
       const p0 = progressRef.current;
       const tg = targetRef.current;
       if (Math.abs(p0 - tg) > 0.0005) {
-        progressRef.current += (tg - p0) * 0.018;
+        progressRef.current += (tg - p0) * 0.01;
       } else {
         progressRef.current = tg;
       }
       const p = progressRef.current; 
 
       const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-      // nightime 
+      // night 
       const nTop = [18, 10, 45];
       const nBot = [70, 30, 90];
-      // daytime
+      // day
       const dTop = [30, 170, 230];
       const dBot = [135, 215, 255];
 
@@ -395,7 +533,7 @@ const DayNightBackground: React.FC<DayNightBackgroundProps> = ({ onThemeChange }
       />
       <button
         onClick={toggleTheme}
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-700 ${
+        className={`fixed bottom-6 right-6 z-9999 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-500 ${
           isDay
             ? "bg-sky-600 hover:bg-sky-700 shadow-sky-500"
             : "bg-indigo-950 hover:bg-indigo-900 shadow-purple-800"
