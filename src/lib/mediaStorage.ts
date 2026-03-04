@@ -118,6 +118,41 @@ export async function getMediaPublic(id: string, ownerId: string): Promise<strin
   return data?.publicUrl ?? null;
 }
 
+export async function migrateLocalMediaToDB(): Promise<void> {
+  const user = useAuthStore.getState().user;
+  if (!user) return;
+
+  const db = await openDB();
+  const keys: string[] = await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).getAllKeys();
+    req.onsuccess = () => resolve(req.result as string[]);
+    req.onerror = () => reject(req.error);
+  });
+
+  console.log(`Migrating ${keys.length} media files to Supabase...`);
+
+  for (const key of keys) {
+    const blob: Blob = await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const req = tx.objectStore(STORE_NAME).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    if (!blob) continue;
+
+    const path = `${user.id}/${key}`;
+    const { error } = await supabase.storage.from("media").upload(path, blob, { upsert: true });
+    if (error) {
+      console.error(`Failed to migrate ${key}:`, error);
+    } else {
+      console.log(`Migrated: ${key}`);
+    }
+  }
+
+  console.log("Migration complete!");
+}
 // export async function deleteMedia(id: string): Promise<void> {
 //   const db = await getDB();
 //   await db.delete(STORE_NAME, id);

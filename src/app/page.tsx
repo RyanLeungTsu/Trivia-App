@@ -7,6 +7,8 @@ import { useAuthStore } from "../lib/authStore";
 import { useBoardStore } from "../store/editorStore";
 import DayNightBackground from "../components/DayNightBackground";
 
+import { migrateLocalMediaToDB } from "../lib/mediaStorage";
+
 export default function Home() {
   const init = useAuthStore((s) => s.init);
   const loadBoards = useBoardStore((s) => s.loadBoards);
@@ -22,6 +24,8 @@ export default function Home() {
 
     const setup = async () => {
       await useAuthStore.getState().waitForAuth();
+
+      await migrateLocalMediaToDB();
 
       await loadFeaturedBoard();
       await loadBoards();

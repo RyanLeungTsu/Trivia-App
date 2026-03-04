@@ -21,6 +21,7 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
   const setStagedCell = useBoardStore((s) => s.setStagedCell);
 
   const masterId = useBoardStore((s) => s.activeBoard?.masterId);
+  console.log("masterId:", masterId);
 
   const [slides, setSlides] = useState<Slide[]>(cell.slides);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
