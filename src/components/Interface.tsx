@@ -18,7 +18,6 @@ const Interface: React.FC = () => {
   const {
     boards,
     activeBoard,
-    activeBoardId,
     setActiveBoard,
     updateActiveBoard,
     createBoard,
@@ -77,14 +76,28 @@ const Interface: React.FC = () => {
   return (
     <>
       {/* left side ui for players/tooltips */}
-      <div className="fixed top-4 left-4 z-50 text-lg" >
-            <a
-              style={{ color: "var(--text)" }}
-              href="https://buzzin.live"
-              target="_blank"
-            >
-              Click here for buzzer!
-            </a>
+      <div className="fixed top-4 left-4 z-50 flex flex-col gap-2">
+        <a
+          href="https://buzzin.live"
+          target="_blank"
+          className="ml-4 mr-4 relative inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-bold text-heading group bg-gradient-to-br from-amber-400 to-red-400  text-red-500 hover:text-white focus:outline-none focus:ring-0"
+        >
+          {" "}
+          <span className="w-full relative px-6 py-3 inline-flex gap-3 transition-all ease-in duration-00 bg-gray-100 group-hover:bg-transparent">
+            Click here for buzzer!
+          </span>
+        </a>
+
+        <a
+          href="https://ko-fi.com/tsubasals"
+          target="_blank"
+          className="ml-4 mr-4 relative inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-bold text-heading group bg-gradient-to-br from-[#72A5F2] to-[#C19BFF] text-[#C19BFF] hover:text-white focus:outline-none focus:ring-0"
+        >
+          <span className="w-full relative px-6 py-3 inline-flex gap-3 transition-all ease-in duration-00 bg-gray-100 group-hover:bg-transparent">
+            <img src="/kofi_symbol.svg" alt="Ko-fi" width="18" height="18" />
+            Buy me a Coffee!
+          </span>
+        </a>
       </div>
       {expanded && (
         <div className="fixed left-0 top-1/2 transform -translate-y-1/2 w-50 bg-black/20 rounded-lg shadow-xl p-4 ml-2 z-100">

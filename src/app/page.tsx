@@ -12,10 +12,6 @@ import { migrateLocalMediaToDB } from "../lib/mediaStorage";
 export default function Home() {
   const init = useAuthStore((s) => s.init);
   const loadBoards = useBoardStore((s) => s.loadBoards);
-  // const activeBoard = useBoardStore((s) => s.activeBoard);
-  // const boards = useBoardStore((s) => s.boards);
-  // const user = useAuthStore((s) => s.user);
-  // const loading = useAuthStore((s) => s.loading);
   const loadFeaturedBoard = useBoardStore((s) => s.loadFeaturedBoard);
   const [ready, setReady] = useState(false);
 

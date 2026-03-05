@@ -74,11 +74,6 @@ const FeaturedBoard: React.FC = () => {
           </span>
         </button>
       )}
-      
-
-      
-        
-      
     </div>
   );
 };

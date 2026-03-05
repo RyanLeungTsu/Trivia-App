@@ -80,8 +80,6 @@ interface BoardState {
   setFinalJeopardy: (cell: JeopardyCell | null) => void;
   removeFinalJeopardy: () => void;
 
-  // categories: string[];
-  // setCategories: (cats: string[]) => void;
   setCategoryAt: (index: number, value: string) => void;
 
   resetPlayedCells: () => void;
