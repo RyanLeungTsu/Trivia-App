@@ -65,7 +65,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const user = session?.user ?? null;
       set({ user, loading: false });
 
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+      if (event === "SIGNED_OUT") {
         const { useBoardStore } = await import("../store/editorStore");
         useBoardStore.getState().loadBoards();
       }

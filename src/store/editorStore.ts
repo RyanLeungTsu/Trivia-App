@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { supabase } from "../lib/supabaseClient";
 import { useAuthStore } from "../lib/authStore";
+import { getMedia } from "../lib/mediaStorage";
 
 export type ElementKind = "text" | "image" | "audio" | "video";
 export const DefaultFontSize = 40;
@@ -38,7 +39,6 @@ export interface Board {
   finalJeopardy?: JeopardyCell | null;
   createdAt: number;
   updatedAt: number;
-  masterId?: string
 }
 
 interface BoardState {
@@ -224,10 +224,59 @@ export const useBoardStore = create<BoardState>((set, get) => {
       const { activeBoard } = get();
       if (!activeBoard) return;
 
+      // re-uploads all media to feautred baord sin db
+      const boardCopy = JSON.parse(JSON.stringify(activeBoard)) as Board;
+
+      for (const cell of boardCopy.cells) {
+        for (const slide of cell.slides) {
+          for (const el of slide.elements) {
+            if (el.kind !== "text" && el.content.startsWith("idb://")) {
+              const mediaId = el.content.replace("idb://", "");
+              try {
+                // gets blob from local storage or supabase
+                const url = await getMedia(mediaId);
+                if (!url) continue;
+                const res = await fetch(url);
+                const blob = await res.blob();
+                const path = `featured/${mediaId}`;
+                await supabase.storage
+                  .from("media")
+                  .upload(path, blob, { upsert: true });
+                // rewrites the reference
+                el.content = `featured://${mediaId}`;
+              } catch (e) {
+                console.error(`Failed to upload featured media ${mediaId}:`, e);
+              }
+            }
+          }
+        }
+      }
+
+      if (boardCopy.finalJeopardy) {
+        for (const slide of boardCopy.finalJeopardy.slides) {
+          for (const el of slide.elements) {
+            if (el.kind !== "text" && el.content.startsWith("idb://")) {
+              const mediaId = el.content.replace("idb://", "");
+              try {
+                const url = await getMedia(mediaId);
+                if (!url) continue;
+                const res = await fetch(url);
+                const blob = await res.blob();
+                await supabase.storage
+                  .from("media")
+                  .upload(`featured/${mediaId}`, blob, { upsert: true });
+                el.content = `featured://${mediaId}`;
+              } catch (e) {
+                console.error(`Failed to upload featured media ${mediaId}:`, e);
+              }
+            }
+          }
+        }
+      }
+
       const boardToPublish: Board = {
-        ...activeBoard,
+        ...boardCopy,
         usedCells: {},
-        masterId: useAuthStore.getState().user?.id,
         updatedAt: Date.now(),
       };
 
@@ -249,8 +298,8 @@ export const useBoardStore = create<BoardState>((set, get) => {
     loadBoards: async () => {
       await new Promise((r) => setTimeout(r, 50));
       const { user } = useAuthStore.getState();
-      console.log("loadBoards called, user:", user?.email); 
-  console.log("local boards:", localStorage.getItem("jeopardyBoards"));
+      console.log("loadBoards called, user:", user?.email);
+      console.log("local boards:", localStorage.getItem("jeopardyBoards"));
 
       if (user) {
         const localRaw = localStorage.getItem("jeopardyBoards");
@@ -295,7 +344,9 @@ export const useBoardStore = create<BoardState>((set, get) => {
 
         const { activeBoardId } = get();
         const stillExists = supabaseBoards.find((b) => b.id === activeBoardId);
-        const active = stillExists ?? supabaseBoards[0] ?? null;
+        const currentActive = get().activeBoard;
+        const active =
+          stillExists ?? currentActive ?? supabaseBoards[0] ?? null;
         set({
           boards: supabaseBoards,
           activeBoard: active,

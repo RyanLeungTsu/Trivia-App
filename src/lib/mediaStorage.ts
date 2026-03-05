@@ -1,6 +1,7 @@
 import { supabase } from "./supabaseClient";
 import { useAuthStore } from "./authStore";
 
+
 const urlCache = new Map<string, { url: string; expires: number }>();
 // interface MediaDB extends DBSchema {
 //   media: {
@@ -9,11 +10,9 @@ const urlCache = new Map<string, { url: string; expires: number }>();
 //   };
 // }
 
-const DB_NAME = 'jeopardy-media';
+const DB_NAME = "jeopardy-media";
 const DB_VERSION = 1;
-const STORE_NAME = 'media';
-
-
+const STORE_NAME = "media";
 
 // let dbInstance: IDBPDatabase<MediaDB> | null = null;
 
@@ -95,7 +94,10 @@ export async function getMedia(id: string): Promise<string | null> {
       .createSignedUrl(path, 3600);
 
     if (!error && data?.signedUrl) {
-      urlCache.set(id, { url: data.signedUrl, expires: Date.now() + 50 * 60 * 1000 });
+      urlCache.set(id, {
+        url: data.signedUrl,
+        expires: Date.now() + 50 * 60 * 1000,
+      });
       return data.signedUrl;
     }
 
@@ -104,7 +106,6 @@ export async function getMedia(id: string): Promise<string | null> {
 
     console.error(`Media not found anywhere: ${id}`);
     return null;
-
   } else {
     const localUrl = await getMediaLocal(id);
     if (!localUrl) console.error(`Media not found in IndexedDB: ${id}`);
@@ -112,13 +113,17 @@ export async function getMedia(id: string): Promise<string | null> {
   }
 }
 // To grab media for public/non 0signed in users
-export async function getMediaPublic(id: string, ownerId: string): Promise<string | null> {
+export async function getMediaPublic(
+  id: string,
+  ownerId: string,
+): Promise<string | null> {
   const path = `${ownerId}/${id}`;
   const { data } = supabase.storage.from("media").getPublicUrl(path);
   return data?.publicUrl ?? null;
 }
 
 export async function migrateLocalMediaToDB(): Promise<void> {
+
   const user = useAuthStore.getState().user;
   if (!user) return;
 
@@ -130,27 +135,44 @@ export async function migrateLocalMediaToDB(): Promise<void> {
     req.onerror = () => reject(req.error);
   });
 
-  console.log(`Migrating ${keys.length} media files to Supabase...`);
+  const migratedRaw = localStorage.getItem("migratedMediaIds");
+  const migratedIds = new Set<string>(migratedRaw ? JSON.parse(migratedRaw) : []);
 
-  for (const key of keys) {
-    const blob: Blob = await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, "readonly");
-      const req = tx.objectStore(STORE_NAME).get(key);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
+  const toMigrate = keys.filter((k) => !migratedIds.has(k));
 
-    if (!blob) continue;
-
-    const path = `${user.id}/${key}`;
-    const { error } = await supabase.storage.from("media").upload(path, blob, { upsert: true });
-    if (error) {
-      console.error(`Failed to migrate ${key}:`, error);
-    } else {
-      console.log(`Migrated: ${key}`);
-    }
+  if (toMigrate.length === 0) {
+    console.log("No media to migrate.");
+    return;
   }
 
+  console.log(`Migrating ${toMigrate.length} media files to Supabase...`);
+
+  const BATCH_SIZE = 10;
+  for (let i = 0; i < toMigrate.length; i += BATCH_SIZE) {
+    const batch = toMigrate.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (key) => {
+        const blob: Blob = await new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, "readonly");
+          const req = tx.objectStore(STORE_NAME).get(key);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        if (!blob) return;
+        const path = `${user.id}/${key}`;
+        const { error } = await supabase.storage
+          .from("media")
+          .upload(path, blob, { upsert: true });
+        if (error) console.error(`Failed to migrate ${key}:`, error);
+        else {
+          migratedIds.add(key);
+          console.log(`Migrated: ${key}`);
+        }
+      }),
+    );
+  }
+
+  localStorage.setItem("migratedMediaIds", JSON.stringify([...migratedIds]));
   console.log("Migration complete!");
 }
 // export async function deleteMedia(id: string): Promise<void> {
@@ -159,7 +181,7 @@ export async function migrateLocalMediaToDB(): Promise<void> {
 //   console.log(`Media deleted: ${id}`);
 // }
 
-// grabs media IDs stored in db 
+// grabs media IDs stored in db
 // export async function getAllMediaIds(): Promise<string[]> {
 //   const db = await getDB();
 //   const keys = await db.getAllKeys(STORE_NAME);
@@ -185,13 +207,13 @@ export async function migrateLocalMediaToDB(): Promise<void> {
 //   const db = await getDB();
 //   const allKeys = await db.getAllKeys(STORE_NAME);
 //   let totalSize = 0;
-  
+
 //   for (const key of allKeys) {
 //     const blob = await db.get(STORE_NAME, key);
 //     if (blob) {
 //       totalSize += blob.size;
 //     }
 //   }
-  
+
 //   return totalSize;
 // }

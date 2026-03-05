@@ -25,7 +25,7 @@ export default function Home() {
     const setup = async () => {
       await useAuthStore.getState().waitForAuth();
 
-      await migrateLocalMediaToDB();
+        migrateLocalMediaToDB().catch(console.error);
 
       await loadFeaturedBoard();
       await loadBoards();
