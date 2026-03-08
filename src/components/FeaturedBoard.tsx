@@ -20,12 +20,14 @@ const FeaturedBoard: React.FC = () => {
   const isAdmin = user?.id === ADMIN_USER_ID;
 
   if (!featuredBoard || Object.keys(featuredBoard).length === 0) {
-  return (
-    <div className="fixed top-0 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 bg-transparent px-4 py-2">
-      <span className="text-sm" style={{ color: "var(--text)" }}>Refresh page for featured board...</span>
-    </div>
-  );
-}
+    return (
+      <div className="fixed top-0 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 bg-transparent px-4 py-2">
+        <span className="text-sm" style={{ color: "var(--text)" }}>
+          Refresh page for featured board...
+        </span>
+      </div>
+    );
+  }
 
   const isAlreadyLoaded = boards.some((b) => b.id === featuredBoard.id);
 
@@ -61,10 +63,12 @@ const FeaturedBoard: React.FC = () => {
       </span>
       <button
         onClick={() => {
+          if (!featuredBoard) return;
           resetPlayedCells();
           loadFeaturedBoard();
         }}
-        className="w-20 inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-bold text-heading group bg-gradient-to-br from-purple-700 to-orange-400 text-purple-500 hover:text-white focus:outline-none focus:ring-0"
+        disabled={!featuredBoard}
+        className="w-20 inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-bold text-heading group bg-gradient-to-br from-purple-700 to-orange-400 text-purple-500 hover:text-white focus:outline-none focus:ring-0 disabled:opacity-50"
       >
         <span className="w-full relative px-4 py-2 transition-all ease-in duration-350 bg-gray-100 group-hover:bg-transparent">
           Play
