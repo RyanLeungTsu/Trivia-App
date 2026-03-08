@@ -85,6 +85,7 @@ interface BoardState {
   resetPlayedCells: () => void;
 
   loadBoards: () => Promise<void>;
+  migrateLocalBoards: () => Promise<number>;
 }
 
 export function createEmptyBoard(name = ""): Board {
@@ -300,9 +301,6 @@ export const useBoardStore = create<BoardState>((set, get) => {
       console.log("local boards:", localStorage.getItem("jeopardyBoards"));
 
       if (user) {
-        const localRaw = localStorage.getItem("jeopardyBoards");
-        const localBoards: Board[] = localRaw ? JSON.parse(localRaw) : [];
-
         const { data } = await supabase
           .from("boards")
           .select("*")
@@ -310,36 +308,6 @@ export const useBoardStore = create<BoardState>((set, get) => {
           .order("updated_at", { ascending: false });
 
         const supabaseBoards: Board[] = (data ?? []).map((r) => r.data);
-        const supabaseIds = new Set(supabaseBoards.map((b) => b.id));
-
-        const migratedRaw = localStorage.getItem("migratedBoardIds");
-        const migratedIds: Set<string> = new Set(
-          migratedRaw ? JSON.parse(migratedRaw) : [],
-        );
-
-        const toMigrate = localBoards.filter(
-          (b) => !supabaseIds.has(b.id) && !migratedIds.has(b.id),
-        );
-
-        if (toMigrate.length > 0) {
-          await Promise.all(
-            toMigrate.map((board) =>
-              supabase.from("boards").upsert({
-                id: board.id,
-                user_id: user.id,
-                data: board,
-                updated_at: board.updatedAt ?? Date.now(),
-              }),
-            ),
-          );
-
-          toMigrate.forEach((b) => migratedIds.add(b.id));
-          localStorage.setItem(
-            "migratedBoardIds",
-            JSON.stringify([...migratedIds]),
-          );
-        }
-
         const { activeBoardId } = get();
         const stillExists = supabaseBoards.find((b) => b.id === activeBoardId);
         const currentActive = get().activeBoard;
@@ -356,6 +324,48 @@ export const useBoardStore = create<BoardState>((set, get) => {
         const active = boards[0] ?? null;
         set({ boards, activeBoard: active, activeBoardId: active?.id ?? null });
       }
+    },
+
+    migrateLocalBoards: async () => {
+      const user = useAuthStore.getState().user;
+      if (!user) return 0;
+
+      const localRaw = localStorage.getItem("jeopardyBoards");
+      const localBoards: Board[] = localRaw ? JSON.parse(localRaw) : [];
+      if (localBoards.length === 0) return 0;
+
+      const { data } = await supabase
+        .from("boards")
+        .select("id")
+        .eq("user_id", user.id);
+
+      const supabaseIds = new Set((data ?? []).map((r) => r.id));
+      const toMigrate = localBoards.filter((b) => !supabaseIds.has(b.id));
+      if (toMigrate.length === 0) return 0;
+
+      const results = await Promise.all(
+        toMigrate.map((board) =>
+          supabase.from("boards").insert({
+            id: board.id,
+            user_id: user.id,
+            name: board.name,
+            data: board,
+            created_at: board.createdAt,
+            updated_at: board.updatedAt ?? Date.now(),
+          }),
+        ),
+      );
+      results.forEach((r, i) => {
+        if (r.error)
+          console.error(
+            `Failed to upsert board ${toMigrate[i].name}:`,
+            r.error,
+          );
+        else console.log(`Upserted board: ${toMigrate[i].name}`);
+      });
+
+      await get().loadBoards();
+      return toMigrate.length;
     },
 
     setCategoryAt: (index: number, value: string) => {

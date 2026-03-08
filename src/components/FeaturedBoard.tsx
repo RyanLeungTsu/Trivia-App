@@ -19,25 +19,40 @@ const FeaturedBoard: React.FC = () => {
 
   const isAdmin = user?.id === ADMIN_USER_ID;
 
-  if (!featuredBoard || Object.keys(featuredBoard).length === 0) return null;
+  if (!featuredBoard || Object.keys(featuredBoard).length === 0) {
+  return (
+    <div className="fixed top-0 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 bg-transparent px-4 py-2">
+      <span className="text-sm" style={{ color: "var(--text)" }}>Refresh page for featured board...</span>
+    </div>
+  );
+}
 
   const isAlreadyLoaded = boards.some((b) => b.id === featuredBoard.id);
 
   const loadFeaturedBoard = () => {
     if (isAlreadyLoaded) {
       setActiveBoard(featuredBoard.id);
-    } else {
-      // adds my featured board so everyone can play it :] yeah!
+      return;
+    }
+
+    // checks to see if featured baord id has been added already
+    const addedIds = JSON.parse(
+      localStorage.getItem("addedFeaturedIds") || "[]",
+    );
+    if (!addedIds.includes(featuredBoard.id)) {
       const updatedBoards = [...boards, featuredBoard];
       useBoardStore.setState({ boards: updatedBoards });
-      setActiveBoard(featuredBoard.id);
+      localStorage.setItem(
+        "addedFeaturedIds",
+        JSON.stringify([...addedIds, featuredBoard.id]),
+      );
     }
+
+    setActiveBoard(featuredBoard.id);
   };
 
   return (
-    
     <div className="fixed top-0 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 bg-transparent px-4 py-2">
-      
       <span className="text-lg font-bold" style={{ color: "var(--text)" }}>
         Featured Board:
       </span>
