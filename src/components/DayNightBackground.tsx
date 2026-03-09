@@ -533,7 +533,7 @@ const DayNightBackground: React.FC<DayNightBackgroundProps> = ({ onThemeChange }
       />
       <button
         onClick={toggleTheme}
-        className={`fixed bottom-6 right-6 z-9999 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-500 ${
+        className={`fixed bottom-6 right-2 z-9999 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-500 ${
           isDay
             ? "bg-sky-600 hover:bg-sky-700 shadow-sky-500"
             : "bg-indigo-950 hover:bg-indigo-900 shadow-purple-800"

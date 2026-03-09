@@ -59,17 +59,21 @@ export default function Home() {
     return (
       <main className="min-h-screen flex items-center justify-center">
         <DayNightBackground />
-        <div className="text-white text-2xl font-bold">Loading...</div>
+        <div className="text-white text-2xl font-bold z-10">Loading...</div>
       </main>
     );
   }
 
-  return (
-    <main className="min-h-screen flex items-center justify-center">
+   return (
+    <main className="min-h-screen flex flex-col">
       <DayNightBackground />
+
       <FeaturedBoard />
-      <JeopardyGrid />
-      <Interface />
+
+      <div className="flex-1 flex items-center justify-center relative z-10">
+        <JeopardyGrid />
+        <Interface />
+      </div>
     </main>
   );
 }

@@ -272,7 +272,7 @@ export const useBoardStore = create<BoardState>((set, get) => {
           }
         }
       }
-
+    
       const boardToPublish: Board = {
         ...boardCopy,
         usedCells: {},

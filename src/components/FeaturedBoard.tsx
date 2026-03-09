@@ -21,9 +21,12 @@ const FeaturedBoard: React.FC = () => {
 
   if (!featuredBoard || Object.keys(featuredBoard).length === 0) {
     return (
-      <div className="fixed top-0 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 bg-transparent px-4 py-2">
-        <span className="text-sm" style={{ color: "var(--text)" }}>
-          Refresh page for featured board...
+      <div className="w-full flex items-center justify-center px-4 py-2">
+        <span
+          className="text-xs opacity-40"
+          style={{ color: "var(--ui-text)" }}
+        >
+          Loading featured board...
         </span>
       </div>
     );
@@ -32,49 +35,48 @@ const FeaturedBoard: React.FC = () => {
   const isAlreadyLoaded = boards.some((b) => b.id === featuredBoard.id);
 
   const loadFeaturedBoard = () => {
-    if (isAlreadyLoaded) {
-      setActiveBoard(featuredBoard.id);
-      return;
-    }
-
-    // checks to see if featured baord id has been added already
     const addedIds = JSON.parse(
       localStorage.getItem("addedFeaturedIds") || "[]",
     );
-    if (!addedIds.includes(featuredBoard.id)) {
-      const updatedBoards = [...boards, featuredBoard];
-      useBoardStore.setState({ boards: updatedBoards });
-      localStorage.setItem(
-        "addedFeaturedIds",
-        JSON.stringify([...addedIds, featuredBoard.id]),
-      );
-    }
 
-    setActiveBoard(featuredBoard.id);
+    if (isAlreadyLoaded) {
+      // just switches to it without adding again
+      setActiveBoard(featuredBoard.id);
+    } else {
+      if (!addedIds.includes(featuredBoard.id)) {
+        const updatedBoards = [...boards, featuredBoard];
+        useBoardStore.setState({ boards: updatedBoards });
+
+        localStorage.setItem(
+          "addedFeaturedIds",
+          JSON.stringify([...addedIds, featuredBoard.id]),
+        );
+      }
+      setActiveBoard(featuredBoard.id);
+    }
   };
 
   return (
-    <div className="fixed top-0 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 bg-transparent px-4 py-2">
-      <span className="text-lg font-bold" style={{ color: "var(--text)" }}>
-        Featured Board:
+    <div className="w-full flex items-center justify-center gap-2 md:gap-3 px-3 md:px-4 py-2 bg-white/10 backdrop-blur-sm border-b border-white/20">
+      <span className="text-xs md:text-sm font-bold text-yellow-300">
+        ⭐ Featured:
       </span>
-      <span className="text-med" style={{ color: "var(--text)" }}>
+      <span
+        className="text-xs md:text-sm truncate max-w-[100px] sm:max-w-[200px] md:max-w-none"
+        style={{ color: "var(--ui-text)" }}
+      >
         {featuredBoard.name}
       </span>
       <button
         onClick={() => {
-          if (!featuredBoard) return;
-          resetPlayedCells();
           loadFeaturedBoard();
+          resetPlayedCells();
         }}
-        disabled={!featuredBoard}
-        className="w-20 inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-bold text-heading group bg-gradient-to-br from-purple-700 to-orange-400 text-purple-500 hover:text-white focus:outline-none focus:ring-0 disabled:opacity-50"
+        className="px-2 md:px-3 py-1 bg-blue-500 text-white rounded text-xs md:text-sm hover:bg-blue-600 shrink-0"
       >
-        <span className="w-full relative px-4 py-2 transition-all ease-in duration-350 bg-gray-100 group-hover:bg-transparent">
-          Play
-        </span>
+        Play
       </button>
-      {/* only visible to you as admin */}
+      {/* only visible to admin */}
       {isAdmin && (
         <button
           onClick={() => {
@@ -86,11 +88,9 @@ const FeaturedBoard: React.FC = () => {
               return;
             publishAsFeaturedBoard();
           }}
-          className="w-40 inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-bold text-heading group bg-gradient-to-br from-purple-700 to-orange-400 text-purple-500 hover:text-white focus:outline-none focus:ring-0"
+          className="px-2 md:px-3 py-1 bg-purple-500 text-white rounded text-xs md:text-sm hover:bg-purple-600 shrink-0"
         >
-          <span className="w-full relative px-4 py-2 transition-all ease-in duration-350 bg-gray-100 group-hover:bg-transparent">
-            Publish Current
-          </span>
+          Publish Current
         </button>
       )}
     </div>
