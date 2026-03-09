@@ -28,6 +28,9 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
 
   const currentSlide = slides[currentSlideIndex];
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
   const saveSlide = () => {
@@ -141,6 +144,7 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
         }
       }
     };
+    
 
     window.addEventListener("paste", handlePaste);
 
@@ -149,232 +153,261 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
     };
   }, [editing, slides, currentSlideIndex]);
 
-  const handleClose = () => {
-  if (unsavedSlide && !confirm("You have unsaved changes. Close anyway?")) {
-    return;
-  }
+  useEffect(() => {
+  const update = () => {
+    if (!containerRef.current) return;
+    const { width, height } = containerRef.current.getBoundingClientRect();
+    setScale(Math.min(width / 1400, height / 700));
+  };
+  update();
+  window.addEventListener("resize", update);
+  return () => window.removeEventListener("resize", update);
+}, []);
 
-  const updatedCell: JeopardyCell = {
-    row: cell.row,
-    col: cell.col,
-    points: cell.points,
-    slides: slides,
+  const handleClose = () => {
+    if (unsavedSlide && !confirm("You have unsaved changes. Close anyway?")) {
+      return;
+    }
+
+    const updatedCell: JeopardyCell = {
+      row: cell.row,
+      col: cell.col,
+      points: cell.points,
+      slides: slides,
+    };
+
+    const { activeBoard, setFinalJeopardy } = useBoardStore.getState();
+    const isFinalJeopardy =
+      activeBoard?.finalJeopardy?.row === cell.row &&
+      activeBoard?.finalJeopardy?.col === cell.col;
+
+    if (isFinalJeopardy) {
+      setFinalJeopardy(updatedCell);
+    } else {
+      setStagedCell(updatedCell);
+      const { commitStagedCell } = useBoardStore.getState();
+      commitStagedCell();
+    }
+
+    close();
   };
 
-  const { activeBoard, setFinalJeopardy } = useBoardStore.getState();
-  const isFinalJeopardy =
-    activeBoard?.finalJeopardy?.row === cell.row &&
-    activeBoard?.finalJeopardy?.col === cell.col;
-
-  if (isFinalJeopardy) {
-    setFinalJeopardy(updatedCell);
-  } else {
-    setStagedCell(updatedCell);
-    const { commitStagedCell } = useBoardStore.getState();
-    commitStagedCell();
-  }
-
-  close();
-};
-
   return (
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-10 backdrop-blur-sm flex items-center justify-center z-999">
-      <div className="p-4 rounded w-[90vw] h-[90vh] max-w-[1400px] overflow-y-auto relative"style={{ backgroundColor: "transparent", color:"var(--ui-text)"  }}>
-        <div className="relative w-full h-[70vh] border-3 border-blue-400 mb-4"style={{ backgroundColor: "var(--ui-bg)", color:"var(--ui-text)"  }}>
-          {currentSlide.elements.map((el) =>
-            editing ? (
-              <Rnd
-                key={el.id}
-                size={{ width: el.width ?? 200, height: el.height ?? 100 }}
-                position={{ x: el.x, y: el.y }}
-                bounds="parent"
-                dragHandleClassName="drag-handle"
-                onDragStop={(_, d) => updateElement(el.id, { x: d.x, y: d.y })}
-                onResizeStop={(_, __, ref, ___, position) =>
-                  updateElement(el.id, {
-                    width: ref.offsetWidth,
-                    height: ref.offsetHeight,
-                    x: position.x,
-                    y: position.y,
-                  })
-                }
-                enableResizing={{
-                  top: true,
-                  right: true,
-                  bottom: true,
-                  left: true,
-                  topRight: true,
-                  bottomRight: true,
-                  bottomLeft: true,
-                  topLeft: true,
-                }}
-                style={{ boxSizing: "border-box" }}
-              >
-                <div
-                  className="border bg-white h-full relative group"
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-5 backdrop-blur-sm flex items-center justify-center z-999">
+      <div
+        className="p-4 rounded w-[90vw] h-[90vh] max-w-[1400px] overflow-y-auto relative"
+        style={{ backgroundColor: "transparent", color: "var(--ui-text)" }}
+      >
+        <div
+          ref={containerRef}
+          className="relative w-full h-[70vh] border-3 border-blue-400 mb-4 overflow-hidden"
+          style={{ backgroundColor: "var(--ui-bg)", color: "var(--ui-text)" }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: 1400,
+              height: 700,
+              transformOrigin: "top left",
+              transform: `scale(${scale})`,
+              pointerEvents: editing ? "auto" : "none",
+            }}
+          >
+            {currentSlide.elements.map((el) =>
+              editing ? (
+                <Rnd
+                  key={el.id}
+                  size={{ width: el.width ?? 200, height: el.height ?? 100 }}
+                  position={{ x: el.x, y: el.y }}
+                  bounds="parent"
+                  dragHandleClassName="drag-handle"
+                  onDragStop={(_, d) => updateElement(el.id, { x: d.x, y: d.y })}
+                  onResizeStop={(_, __, ref, ___, position) =>
+                    updateElement(el.id, {
+                      width: ref.offsetWidth,
+                      height: ref.offsetHeight,
+                      x: position.x,
+                      y: position.y,
+                    })
+                  }
+                  enableResizing={{
+                    top: true,
+                    right: true,
+                    bottom: true,
+                    left: true,
+                    topRight: true,
+                    bottomRight: true,
+                    bottomLeft: true,
+                    topLeft: true,
+                  }}
                   style={{ boxSizing: "border-box" }}
                 >
-                  {el.kind === "text" && (
-                    <>
-                      <div
-                        className="drag-handle absolute bottom-1 right-1 w-6 h-6 bg-gray-300 flex items-center justify-center cursor-move z-20"
-                        title="Drag"
-                      >
-                        ↕
-                      </div>
+                  <div
+                    className="border bg-white h-full relative group"
+                    style={{ boxSizing: "border-box" }}
+                  >
+                    {el.kind === "text" && (
+                      <>
+                        <div
+                          className="drag-handle absolute bottom-1 right-1 w-6 h-6 bg-gray-300 flex items-center justify-center cursor-move z-20"
+                          title="Drag"
+                        >
+                          ↕
+                        </div>
 
-                      <textarea
-                        className="w-full h-full resize-none bg-transparent p-1" 
-                        value={el.content}
-                        style={{
-                          fontSize: el.fontSize ?? DefaultFontSize,
-                          textAlign: el.textAlign ?? "left",
-                          boxSizing: "border-box",
-                          backgroundColor: "var(--ui-bg)",
-                          color: "var(--text)"
-                        }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onChange={(e) =>
-                          updateElement(el.id, { content: e.target.value })
-                        }
-                      />
+                        <textarea
+                          className="w-full h-full resize-none bg-transparent p-1"
+                          value={el.content}
+                          style={{
+                            fontSize: el.fontSize ?? DefaultFontSize,
+                            textAlign: el.textAlign ?? "left",
+                            boxSizing: "border-box",
+                            backgroundColor: "var(--ui-bg)",
+                            color: "var(--text)",
+                          }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onChange={(e) =>
+                            updateElement(el.id, { content: e.target.value })
+                          }
+                        />
 
-                      <div className="absolute bottom-1 left-1 flex gap-1">
-                        <button
-                          onClick={() =>
-                            updateElement(el.id, {
-                              fontSize: (el.fontSize ?? DefaultFontSize) + 2,
-                            })
-                          }
-                          className="bg-gray-300 p-1 rounded text-xs"
-                          title="Increase Font"
-                        >
-                          A+
-                        </button>
-                        <button
-                          onClick={() =>
-                            updateElement(el.id, {
-                              fontSize: Math.max(
-                                (el.fontSize ?? DefaultFontSize) - 2,
-                                8,
-                              ),
-                            })
-                          }
-                          className="bg-gray-300 p-1 rounded text-xs"
-                          title="Decrease Font"
-                        >
-                          A-
-                        </button>
-                        <button
-                          onClick={() =>
-                            updateElement(el.id, { textAlign: "left" })
-                          }
-                          className="bg-gray-300 p-1 rounded text-xs"
-                          title="Align Left"
-                        >
-                          ⬅
-                        </button>
-                        <button
-                          onClick={() =>
-                            updateElement(el.id, { textAlign: "center" })
-                          }
-                          className="bg-gray-300 p-1 rounded text-xs"
-                          title="Align Center"
-                        >
-                          ⬌
-                        </button>
-                        <button
-                          onClick={() =>
-                            updateElement(el.id, { textAlign: "right" })
-                          }
-                          className="bg-gray-300 p-1 rounded text-xs"
-                          title="Align Right"
-                        >
-                          ➡
-                        </button>
+                        <div className="absolute bottom-1 left-1 flex gap-1">
+                          <button
+                            onClick={() =>
+                              updateElement(el.id, {
+                                fontSize: (el.fontSize ?? DefaultFontSize) + 2,
+                              })
+                            }
+                            className="bg-gray-300 p-1 rounded text-xs"
+                            title="Increase Font"
+                          >
+                            A+
+                          </button>
+                          <button
+                            onClick={() =>
+                              updateElement(el.id, {
+                                fontSize: Math.max(
+                                  (el.fontSize ?? DefaultFontSize) - 2,
+                                  8,
+                                ),
+                              })
+                            }
+                            className="bg-gray-300 p-1 rounded text-xs"
+                            title="Decrease Font"
+                          >
+                            A-
+                          </button>
+                          <button
+                            onClick={() =>
+                              updateElement(el.id, { textAlign: "left" })
+                            }
+                            className="bg-gray-300 p-1 rounded text-xs"
+                            title="Align Left"
+                          >
+                            ⬅
+                          </button>
+                          <button
+                            onClick={() =>
+                              updateElement(el.id, { textAlign: "center" })
+                            }
+                            className="bg-gray-300 p-1 rounded text-xs"
+                            title="Align Center"
+                          >
+                            ⬌
+                          </button>
+                          <button
+                            onClick={() =>
+                              updateElement(el.id, { textAlign: "right" })
+                            }
+                            className="bg-gray-300 p-1 rounded text-xs"
+                            title="Align Right"
+                          >
+                            ➡
+                          </button>
+                          <button
+                            onClick={() => removeElement(el.id)}
+                            className="bg-red-500 text-white p-1 rounded text-xs hover:bg-red-600"
+                            title="Delete Text Box"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {el.kind !== "text" && (
+                      <div className="drag-handle relative w-full h-full">
+                        <MediaDisplay
+                          element={el}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "contain",
+                            pointerEvents: "none",
+                            maxWidth: "none",
+                            maxHeight: "none",
+                            display: "block",
+                            color: "var(--text)",
+                          }}
+                        />
                         <button
                           onClick={() => removeElement(el.id)}
-                          className="bg-red-500 text-white p-1 rounded text-xs hover:bg-red-600"
-                          title="Delete Text Box"
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 hover:bg-red-600"
                         >
                           ✕
                         </button>
                       </div>
-                    </>
-                  )}
-
-                  {el.kind !== "text" && (
-                    <div className="drag-handle relative w-full h-full">
-                      <MediaDisplay
-                        element={el}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "contain",
-                          pointerEvents: "none",
-                          maxWidth: "none",
-                          maxHeight: "none",
-                          display: "block",
-                          color: "var(--text)"
-                        }}
-                      />
-                      <button
-                        onClick={() => removeElement(el.id)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 hover:bg-red-600"
-                      >
-                        ✕
-                      </button>
+                    )}
+                  </div>
+                </Rnd>
+              ) : (
+                <div
+                  key={el.id}
+                  style={{
+                    position: "absolute",
+                    left: el.x,
+                    top: el.y,
+                    width: el.width,
+                    height: el.height,
+                  }}
+                >
+                  {el.kind === "text" && (
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        fontSize: (el.fontSize ?? DefaultFontSize) * scale,
+                        color: "var(--text)",
+                        textAlign: el.textAlign ?? "left",
+                        whiteSpace: "pre-wrap",
+                        padding: 4,
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      {el.content}
                     </div>
                   )}
+                  {el.kind === "image" && (
+                    <MediaDisplay
+                      element={el}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "contain",
+                        maxWidth: "none",
+                        maxHeight: "none",
+                        display: "block",
+                      }}
+                    />
+                  )}
+                  {el.kind === "audio" && <MediaDisplay element={el} />}
+                  {el.kind === "video" && <MediaDisplay element={el} />}
                 </div>
-              </Rnd>
-            ) : (
-              <div
-                key={el.id}
-                style={{
-                  position: "absolute",
-                  left: el.x,
-                  top: el.y,
-                  width: el.width,
-                  height: el.height,
-                  
-                }}
-              >
-                {el.kind === "text" && (
-                  <div
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      fontSize: el.fontSize ?? DefaultFontSize,
-                      color: "var(--text)",
-                      textAlign: el.textAlign ?? "left",
-                      whiteSpace: "pre-wrap",
-                      padding: 4,
-                      boxSizing: "border-box",
-                      
-                    }}
-                  >
-                    {el.content}
-                  </div>
-                )}
-                {el.kind === "image" && (
-                  <MediaDisplay
-                    element={el}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "contain",
-                      maxWidth: "none",
-                      maxHeight: "none",
-                      display: "block",
-                    }}
-                  />
-                )}
-                {el.kind === "audio" && <MediaDisplay element={el} />}
-                {el.kind === "video" && <MediaDisplay element={el} />}
-              </div>
-            ),
-          )}
+              ),
+            )}
+          </div>
         </div>
         {/*Exit button for slide ui */}
         <button
