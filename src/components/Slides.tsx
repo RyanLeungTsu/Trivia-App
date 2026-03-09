@@ -193,7 +193,7 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-5 backdrop-blur-sm flex items-center justify-center z-999">
+    <div className="fixed inset-0 backdrop-brightness-50 bg-opacity-5 backdrop-blur-sm flex items-center justify-center z-999">
       <div
         className="p-4 rounded w-[90vw] h-[90vh] max-w-[1400px] overflow-y-auto relative"
         style={{ backgroundColor: "transparent", color: "var(--ui-text)" }}
