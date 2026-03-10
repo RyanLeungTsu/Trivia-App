@@ -212,7 +212,7 @@ const Slides: React.FC<SlidesProps> = ({ cell, close }) => {
               height: 700,
               transformOrigin: "top left",
               transform: `scale(${scale})`,
-              pointerEvents: editing ? "auto" : "none",
+              pointerEvents: "auto",
             }}
           >
             {currentSlide.elements.map((el) =>
