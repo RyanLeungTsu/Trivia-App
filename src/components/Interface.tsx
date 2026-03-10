@@ -213,7 +213,7 @@ const Interface: React.FC = () => {
       {!expanded && (
         <button
           onClick={() => setExpanded(true)}
-          className="hidden md:inline-flex fixed left-4 top-1/2 w-30 ml-1 mr-1 items-center justify-center p-0.5 overflow-hidden text-sm font-bold text-heading group bg-gradient-to-br from-lime-400 to-teal-300  text-green-500 hover:text-white focus:outline-none focus:ring-0"
+          className="hidden md:inline-flex fixed left-4 top-1/2 w-30 ml-4 mr-1 items-center justify-center p-0.5 overflow-hidden text-sm font-bold text-heading group bg-gradient-to-br from-lime-400 to-teal-300  text-green-500 hover:text-white focus:outline-none focus:ring-0"
         >
           <span className=" w-full relative px-8 py-3 transition-all ease-in duration-350 bg-gray-100 group-hover:bg-transparent">
             Players
