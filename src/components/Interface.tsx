@@ -115,7 +115,7 @@ const Interface: React.FC = () => {
   return (
     <>
       {/* left side ui for players/tooltips */}
-      <div className="hidden md:flex fixed top-4 left-4 z-50 flex-col gap-2">
+      <div className="hidden md:flex fixed top-20 left-4 z-50 flex-col gap-2">
         <a
           href="https://buzzin.live"
           target="_blank"

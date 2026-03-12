@@ -1,7 +1,7 @@
 // components/MediaDisplay.tsx
 import React, { useEffect, useState } from "react";
-import { getMedia, getMediaPublic } from "../lib/mediaStorage";
-import { useAuthStore } from "../lib/authStore";
+import { getMedia } from "../lib/mediaStorage";
+// import { useAuthStore } from "../lib/authStore";
 import { supabase } from "../lib/supabaseClient";
 import { SlideElement } from "../store/editorStore";
 
@@ -100,7 +100,12 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
 
   if (element.kind === "audio") {
     return (
-      <audio controls src={mediaUrl} className={className} style={style} />
+      <audio
+      controls
+      src={mediaUrl}
+      className={className}
+      style={{ ...style, width: "100%", height: "auto", minHeight: "54px" }}
+    />
     );
   }
 
