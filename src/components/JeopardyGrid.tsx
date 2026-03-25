@@ -109,6 +109,7 @@ const JeopardyGrid: React.FC = () => {
                 onChange={(e) => setCategoryAt(i, e.target.value)}
                 readOnly={!editMode}
                 className="w-full h-full bg-gray-800 text-white text-center font-bold border-none outline-none resize-none overflow-hidden break-words p-1 pt-3 pb-3"
+                style={{ fontSize: "clamp(10px, 1.5vw, 14px)" }}
                 rows={2}
               />
             </div>
