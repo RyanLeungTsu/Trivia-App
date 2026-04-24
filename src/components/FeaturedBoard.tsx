@@ -32,28 +32,19 @@ const FeaturedBoard: React.FC = () => {
     );
   }
 
-  const isAlreadyLoaded = boards.some((b) => b.id === featuredBoard.id);
-
   const loadFeaturedBoard = () => {
-    const addedIds = JSON.parse(
-      localStorage.getItem("addedFeaturedIds") || "[]",
-    );
+    const isAlreadyLoaded = boards.some((b) => b.id === featuredBoard.id);
 
     if (isAlreadyLoaded) {
-      // just switches to it without adding again
       setActiveBoard(featuredBoard.id);
-    } else {
-      if (!addedIds.includes(featuredBoard.id)) {
-        const updatedBoards = [...boards, featuredBoard];
-        useBoardStore.setState({ boards: updatedBoards });
-
-        localStorage.setItem(
-          "addedFeaturedIds",
-          JSON.stringify([...addedIds, featuredBoard.id]),
-        );
-      }
-      setActiveBoard(featuredBoard.id);
+      return;
     }
+
+    // this directly sets the featured board as active without persisting to user boards 
+    useBoardStore.setState({
+      activeBoard: featuredBoard,
+      activeBoardId: featuredBoard.id,
+    });
   };
 
   return (
